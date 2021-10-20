@@ -2,7 +2,16 @@
 name = "serde-llsd"
 version = "0.1.0"
 edition = "2018"
+authors = ["John-Nagle <nagle@animats.com>"]
+description = "Library for serializing and de-serializing data in Linden Lab Structured Data format. This format is used by Second Life and Open Simulator"
+license = "LGPL-2.1 OR LGPL=3.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
+[dependencies]	
+anyhow = "1.0"
+quick-xml = "0.22.0"
+uuid = { version = "0.8.1", features = ["v4"] }
+hex = "0.4.2"
+base64 = "0.13.0"
+ascii85 = "0.2.1"
+chrono = "0.4"
+enum-as-inner = "0.3"
