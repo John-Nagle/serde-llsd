@@ -15,18 +15,10 @@
 //
 
 use crate::LLSDValue;	
-use anyhow::{anyhow, Error};
-use ascii85;
-use base64;
+use anyhow::{Error};
 use chrono;
 use chrono::TimeZone;
-use hex;
-use quick_xml::events::attributes::Attributes;
-use quick_xml::events::Event;
-use quick_xml::Reader;
-use std::collections::HashMap;
 use std::io::Write;
-use uuid;
 //
 //  Constants
 //

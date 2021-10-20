@@ -41,7 +41,7 @@ pub enum LLSDValue {
     Boolean(bool),
     Real(f64),
     Integer(i32),
-    UUID(uuid::Uuid),
+    UUID(Uuid),
     String(String),
     Date(i64),
     URI(String),
