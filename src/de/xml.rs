@@ -12,7 +12,7 @@
 //  February, 2021.
 //  License: LGPL.
 //
-use super::LLSDValue;
+use crate::LLSDValue;
 use anyhow::{anyhow, Error};
 use ascii85;
 use base64;

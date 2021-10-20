@@ -12,7 +12,7 @@
 //  March, 2021.
 //  License: LGPL.
 //
-use super::LLSDValue;
+use crate::LLSDValue;
 use anyhow::{anyhow, Error};
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Write};
