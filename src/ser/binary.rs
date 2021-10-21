@@ -102,32 +102,4 @@ fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue) -> Result<(), Error
     };
     Ok(())
 }
-/*
-// Unit test
-
-#[test]
-fn binaryparsetest1() {
-    //  Construct a test value.
-    let test1map: HashMap<String, LLSDValue> = [
-        ("val1".to_string(), LLSDValue::Real(456.0)),
-        ("val2".to_string(), LLSDValue::Integer(999)),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    let test1: LLSDValue = LLSDValue::Array(vec![
-        LLSDValue::Real(123.5),
-        LLSDValue::Integer(42),
-        LLSDValue::Map(test1map),
-        LLSDValue::String("Hello world".to_string()),
-    ]);
-    //  Convert to binary form.
-    let test1bin = to_bytes(&test1).unwrap();
-    //  Convert back to value form.
-    let test1value = parse_array(&test1bin[LLSDBINARYSENTINEL.len()..]).unwrap();
-    println!("Value after round-trip conversion: {:?}", test1value);
-    //  Check that results match after round trip.
-    assert_eq!(test1, test1value);
-}
-*/
 

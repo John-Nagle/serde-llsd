@@ -139,7 +139,6 @@ fn parse_value(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
     }
 }
 
-/*
 // Unit test
 
 #[test]
@@ -159,12 +158,11 @@ fn binaryparsetest1() {
         LLSDValue::String("Hello world".to_string()),
     ]);
     //  Convert to binary form.
-    let test1bin = to_bytes(&test1).unwrap();
+    let test1bin = crate::to_bytes(&test1).unwrap();
     //  Convert back to value form.
-    let test1value = parse_array(&test1bin[LLSDBINARYSENTINEL.len()..]).unwrap();
+    let test1value = from_bytes(&test1bin[LLSDBINARYSENTINEL.len()..]).unwrap();
     println!("Value after round-trip conversion: {:?}", test1value);
     //  Check that results match after round trip.
     assert_eq!(test1, test1value);
 }
-*/
 
