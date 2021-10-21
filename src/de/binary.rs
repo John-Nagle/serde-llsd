@@ -24,13 +24,13 @@ pub const LLSDBINARYPREFIX: &[u8] = b"<? LLSD/Binary ?>\n"; // binary LLSD prefi
 pub const LLSDBINARYSENTINEL: &[u8] = LLSDBINARYPREFIX; // prefix must match exactly
 
 ///    Parse LLSD array expressed in binary into an LLSDObject tree. No header.
-pub fn parse_array(b: &[u8]) -> Result<LLSDValue, Error> {
+pub fn from_bytes(b: &[u8]) -> Result<LLSDValue, Error> {
     let mut cursor: Cursor<&[u8]> = Cursor::new(b);
     parse_value(&mut cursor)
 }
 
 ///    Parse LLSD reader expressed in binary into an LLSDObject tree. No header.
-pub fn parse_read(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
+pub fn from_reader(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
     parse_value(cursor)
 }
 
@@ -65,7 +65,7 @@ fn parse_value(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
     fn read_variable(cursor: &mut dyn Read) -> Result<Vec<u8>, Error> {
         let length = read_u32(cursor)?; // read length in bytes
         let mut buf = vec![0u8; length as usize];
-        cursor.read(&mut buf)?;
+        cursor.read_exact(&mut buf)?;
         Ok(buf) // read bytes of string
     }
 
@@ -91,7 +91,7 @@ fn parse_value(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
         //  UUID - 16 bytes
         b'u' => {
             let mut buf: [u8; 16] = [0u8; 16];
-            cursor.read(&mut buf)?; // read bytes of string
+            cursor.read_exact(&mut buf)?; // read bytes of string
             Ok(LLSDValue::UUID(uuid::Uuid::from_bytes(buf)))
         }
         //  Binary - length followed by data
