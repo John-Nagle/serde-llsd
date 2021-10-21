@@ -65,13 +65,11 @@ fn parse_value(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
     fn read_variable(cursor: &mut dyn Read) -> Result<Vec<u8>, Error> {
         let length = read_u32(cursor)?; // read length in bytes
         let mut buf = vec![0u8; length as usize];
-        println!("Read variable: {} bytes", length);    // ***TEMP***
         cursor.read_exact(&mut buf)?;
         Ok(buf) // read bytes of string
     }
 
     let typecode = read_u8(cursor)?;
-    let result = // ***TEMP***
     match typecode {
         //  Undefined - the empty value
         b'!' => Ok(LLSDValue::Undefined),
@@ -138,9 +136,7 @@ fn parse_value(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
         }
 
         _ => Err(anyhow!("Binary LLSD, unexpected type code {:?}", typecode)),
-    };
-    println!("Result: {:?}", result);   // ***TEMP***
-    result // ***TEMP***
+    }
 }
 
 // Unit test
