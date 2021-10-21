@@ -16,15 +16,15 @@ use crate::LLSDValue;
 use anyhow::{anyhow, Error};
 use ascii85;
 use base64;
-use chrono;
-use chrono::TimeZone;
-use hex;
+////use chrono;
+////use chrono::TimeZone;
+////use hex;
 use quick_xml::events::attributes::Attributes;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use std::collections::HashMap;
-use std::io::{Read, BufRead, BufReader};
-use uuid;
+use std::io::{BufRead, BufReader};
+////use uuid;
 //
 //  Constants
 //
@@ -133,7 +133,7 @@ fn parse_primitive_value<R: BufRead>(
     loop {
         let event = reader.read_event(&mut buf);
         match event {
-            Ok(Event::Text(e)) => texts.push(e.unescape_and_decode(&reader)?),
+            Ok(Event::Text(e)) => texts.push(e.unescape_and_decode(reader)?),
             Ok(Event::End(ref e)) => {
                 let tagname = std::str::from_utf8(e.name())?; // tag name as string
                 if starttag != tagname {
@@ -159,8 +159,8 @@ fn parse_primitive_value<R: BufRead>(
                     )),
                     "integer" => Ok(LLSDValue::Integer(text.parse::<i32>()?)),
                     "boolean" => Ok(LLSDValue::Boolean(parse_boolean(&text)?)),
-                    "string" => Ok(LLSDValue::String(text.to_string())),
-                    "uri" => Ok(LLSDValue::String(text.to_string())),
+                    "string" => Ok(LLSDValue::String(text)),
+                    "uri" => Ok(LLSDValue::String(text)),
                     "uuid" => Ok(LLSDValue::UUID(if text.is_empty() {
                         uuid::Uuid::nil()
                     } else {
@@ -224,7 +224,7 @@ fn parse_map<R: BufRead>(reader: &mut Reader<&mut R>) -> Result<LLSDValue, Error
                     }
                 }
             }
-            Ok(Event::Text(e)) => texts.push(e.unescape_and_decode(&reader)?),
+            Ok(Event::Text(e)) => texts.push(e.unescape_and_decode(reader)?),
             Ok(Event::End(ref e)) => {
                 //  End of an XML tag. No text expected.
                 let tagname = std::str::from_utf8(e.name())?; // tag name as string
@@ -271,7 +271,7 @@ fn parse_map_entry<R: BufRead>(reader: &mut Reader<&mut R>) -> Result<(String, L
                 let tagname = std::str::from_utf8(e.name())?; // tag name as string
                 return Err(anyhow!("Expected 'key' in map, found '{}'", tagname));
             }
-            Ok(Event::Text(e)) => texts.push(e.unescape_and_decode(&reader)?),
+            Ok(Event::Text(e)) => texts.push(e.unescape_and_decode(reader)?),
             Ok(Event::End(ref e)) => {
                 //  End of an XML tag. Should be </key>
                 let tagname = std::str::from_utf8(e.name())?; // tag name as string
@@ -334,7 +334,7 @@ fn parse_array<R: BufRead>(reader: &mut Reader<&mut R>) -> Result<LLSDValue, Err
                                                               //  Parse one data item.
                 items.push(parse_value(reader, tagname, &e.attributes())?);
             }
-            Ok(Event::Text(e)) => texts.push(e.unescape_and_decode(&reader)?),
+            Ok(Event::Text(e)) => texts.push(e.unescape_and_decode(reader)?),
             Ok(Event::End(ref e)) => {
                 //  End of an XML tag. Should be </array>
                 let tagname = std::str::from_utf8(e.name())?; // tag name as string
