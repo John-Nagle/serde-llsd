@@ -59,7 +59,7 @@ fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue, spaces: usize, inde
         if indent > 0 {
             let _ = write!(writer, "{:1$}", " ", indent);
         };
-        let _ = write!(writer, "<{}{}>\n", if close { "/" } else { "" }, tag);
+        let _ = writeln!(writer, "<{}{}>", if close { "/" } else { "" }, tag);
     }
 
     //  Internal fn - write out one tag with a value.
@@ -69,9 +69,9 @@ fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue, spaces: usize, inde
         };
         if text.is_empty() {
             // if empty, write as null tag
-            let _ = write!(writer, "<{} />\n", tag);
+            let _ = writeln!(writer, "<{} />", tag);
         } else {
-            let _ = write!(writer, "<{}>{}</{}>\n", tag, xml_escape(text), tag);
+            let _ = writeln!(writer, "<{}>{}</{}>", tag, xml_escape(text), tag);
         }
     }
 
