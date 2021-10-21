@@ -166,4 +166,3 @@ fn binaryparsetest1() {
     //  Check that results match after round trip.
     assert_eq!(test1, test1value);
 }
-

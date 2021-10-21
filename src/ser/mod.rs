@@ -1,2 +1,2 @@
-pub mod xml;
 pub mod binary;
+pub mod xml;

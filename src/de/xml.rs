@@ -34,11 +34,11 @@ pub const LLSDXMLSENTINEL: &str = "<?xml"; // Must begin with this.
 pub fn from_str(xmlstr: &str) -> Result<LLSDValue, Error> {
     from_reader(&mut BufReader::new(xmlstr.as_bytes()))
 }
-    ////let mut reader = Reader::from_str(xmlstr);
+////let mut reader = Reader::from_str(xmlstr);
 
 /// Read XML from buffered source and parse into LLSDValue.
 pub fn from_reader<R: BufRead>(rdr: &mut R) -> Result<LLSDValue, Error> {
-    let mut reader = Reader::from_reader(rdr);  // create an XML reader from a sequential reader
+    let mut reader = Reader::from_reader(rdr); // create an XML reader from a sequential reader
     reader.trim_text(true); // do not want trailing blanks
     reader.expand_empty_elements(true); // want end tag events always
     let mut buf = Vec::new(); // reader work area
@@ -49,7 +49,7 @@ pub fn from_reader<R: BufRead>(rdr: &mut R) -> Result<LLSDValue, Error> {
             Ok(Event::Start(ref e)) => {
                 match e.name() {
                     b"llsd" => {
-       	                 if output.is_some() {
+                        if output.is_some() {
                             return Err(anyhow!("More than one <llsd> block in data"));
                         }
                         let mut buf2 = Vec::new();
@@ -427,7 +427,6 @@ fn get_attr<'a>(attrs: &'a Attributes, key: &[u8]) -> Result<Option<String>, Err
     Ok(None)
 }
 
-
 // Unit tests
 
 #[test]
@@ -516,4 +515,3 @@ fn xmlparsetest1() {
         assert_eq!(s1, s2);
     }
 }
-

@@ -15,28 +15,28 @@
 //
 //  Modules
 //
-pub mod ser;
 pub mod de;
-pub mod error;  
+pub mod error;
+pub mod ser;
 
 pub use crate::{
+    de::{
+        xml::from_reader,
+        ////binary,////	{ from_bytes, from_reader, from_reader_buffered },
+        xml::from_str,
+    },
     ser::{
-        xml::to_string,
-        xml::to_writer,
         binary::to_bytes,
         ////binary::to_writer,  // Name clash
         ////	binary,////::{ to_bytes, to_writer, to_writer_buffered },
-    },
-    de::{
-        xml::from_str,
-        xml::from_reader,
-        ////binary,////	{ from_bytes, from_reader, from_reader_buffered },
+        xml::to_string,
+        xml::to_writer,
     },
 };
 
+use enum_as_inner::EnumAsInner;
 use std::collections::HashMap;
 use uuid::Uuid;
-use enum_as_inner::{EnumAsInner};
 
 ///  The primitive LLSD data item.
 #[derive(Debug, Clone, PartialEq, EnumAsInner)]

@@ -13,8 +13,8 @@
 //  License: LGPL.
 //
 use crate::LLSDValue;
-use anyhow::{Error};
-use std::io::{Write};
+use anyhow::Error;
+use std::io::Write;
 //
 //  Constants
 //
@@ -23,9 +23,9 @@ pub const LLSDBINARYSENTINEL: &[u8] = LLSDBINARYPREFIX; // prefix must match exa
 
 /// Outputs an LLSDValue as a string of bytes, in LLSD "binary" format.
 pub fn to_bytes(val: &LLSDValue) -> Result<Vec<u8>, Error> {
-    let mut writer: Vec<u8> = Vec::new();           // just make a stream and use the stream form
+    let mut writer: Vec<u8> = Vec::new(); // just make a stream and use the stream form
     to_writer(&mut writer, val)?;
-    Ok(writer)  
+    Ok(writer)
 }
 
 /// Outputs an LLSD value to an output stream
@@ -102,4 +102,3 @@ fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue) -> Result<(), Error
     };
     Ok(())
 }
-

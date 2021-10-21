@@ -16,8 +16,8 @@
 //
 //  Much like Serde-JSON, this will serialize and de-serialize only trees of LLSDValue items.
 
-use crate::LLSDValue;	
-use anyhow::{Error};
+use crate::LLSDValue;
+use anyhow::Error;
 use chrono;
 use chrono::TimeZone;
 use std::io::Write;
@@ -28,15 +28,17 @@ pub const LLSDXMLPREFIX: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ll
 pub const LLSDXMLSENTINEL: &str = "<?xml"; // Must begin with this.
 const INDENT: usize = 4; // indent 4 spaces if asked
 
-
-
 // By convention, the public API of a Serde serializer is one or more `to_abc`
 // functions such as `to_string`, `to_bytes`, or `to_writer` depending on what
 // Rust types the serializer is able to produce as output.
 //
 
 /// LLSDValue to Writer
-pub fn to_writer<W: Write>(writer: &mut W, value: &LLSDValue, do_indent: bool) -> Result<(), Error> {
+pub fn to_writer<W: Write>(
+    writer: &mut W,
+    value: &LLSDValue,
+    do_indent: bool,
+) -> Result<(), Error> {
     write!(writer, "{}", LLSDXMLPREFIX)?; // Standard XML prefix
     generate_value(writer, value, if do_indent { INDENT } else { 0 }, 0);
     write!(writer, "</llsd>")?;
@@ -87,7 +89,9 @@ fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue, spaces: usize, inde
     //  Emit XML for all possible types.
     match val {
         LLSDValue::Undefined => tag_value(writer, "undef", "", indent),
-        LLSDValue::Boolean(v) => tag_value(writer, "boolean", if *v { "true" } else { "false" }, indent),
+        LLSDValue::Boolean(v) => {
+            tag_value(writer, "boolean", if *v { "true" } else { "false" }, indent)
+        }
         LLSDValue::String(v) => tag_value(writer, "string", v.as_str(), indent),
         LLSDValue::URI(v) => tag_value(writer, "uri", v.as_str(), indent),
         LLSDValue::Integer(v) => tag_value(writer, "integer", v.to_string().as_str(), indent),
@@ -225,4 +229,3 @@ fn xmlparsetest1() {
     }
 }
 */
-
