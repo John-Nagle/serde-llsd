@@ -15,14 +15,13 @@
 use crate::LLSDValue;
 use anyhow::{anyhow, Error};
 use std::collections::HashMap;
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Read};
 use uuid;
 //
 //  Constants
 //
 pub const LLSDBINARYPREFIX: &[u8] = b"<? LLSD/Binary ?>\n"; // binary LLSD prefix
 pub const LLSDBINARYSENTINEL: &[u8] = LLSDBINARYPREFIX; // prefix must match exactly
-/*
 
 ///    Parse LLSD array expressed in binary into an LLSDObject tree. No header.
 pub fn parse_array(b: &[u8]) -> Result<LLSDValue, Error> {
@@ -140,82 +139,7 @@ fn parse_value(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
     }
 }
 
-/// Outputs an LLSDValue as a string of bytes, in LLSD "binary" format.
-pub fn to_bytes(val: &LLSDValue) -> Result<Vec<u8>, Error> {
-    let mut s: Vec<u8> = Vec::new();
-    s.write(LLSDBINARYPREFIX)?; // prefix
-    generate_value(&mut s, val)?;
-    s.flush()?;
-    Ok(s)
-}
-
-/// Generate one <TYPE> VALUE </TYPE> output. VALUE is recursive.
-fn generate_value(s: &mut Vec<u8>, val: &LLSDValue) -> Result<(), Error> {
-    //  Emit binary for all possible types.
-    match val {
-        LLSDValue::Undefined => s.write(b"!")?,
-        LLSDValue::Boolean(v) => s.write(if *v { b"1" } else { b"0" })?,
-        LLSDValue::String(v) => {
-            s.write(b"s")?;
-            s.write(&(v.len() as u32).to_be_bytes())?;
-            s.write(&v.as_bytes())?
-        }
-        LLSDValue::URI(v) => {
-            s.write(b"l")?;
-            s.write(&(v.len() as u32).to_be_bytes())?;
-            s.write(v.as_bytes())?
-        }
-        LLSDValue::Integer(v) => {
-            s.write(b"i")?;
-            s.write(&v.to_be_bytes())?
-        }
-        LLSDValue::Real(v) => {
-            s.write(b"r")?;
-            s.write(&v.to_be_bytes())?
-        }
-        LLSDValue::UUID(v) => {
-            s.write(b"u")?;
-            s.write(v.as_bytes())?
-        }
-        LLSDValue::Binary(v) => {
-            s.write(b"b")?;
-            s.write(&(v.len() as u32).to_be_bytes())?;
-            s.write(v)?
-        }
-        LLSDValue::Date(v) => {
-            s.write(b"d")?;
-            s.write(&v.to_be_bytes())?
-        }
-
-        //  Map is { childcnt key value key value ... }
-        LLSDValue::Map(v) => {
-            //  Output count of key/value pairs
-            s.write(b"{")?;
-            s.write(&(v.len() as u32).to_be_bytes())?;
-            //  Output key/value pairs
-            for (key, value) in v {
-                s.write(&[b'k'])?; // k prefix to key. UNDOCUMENTED
-                s.write(&(key.len() as u32).to_be_bytes())?;
-                s.write(&key.as_bytes())?;
-                generate_value(s, value)?;
-            }
-            s.write(b"}")?
-        }
-        //  Array is [ childcnt child child ... ]
-        LLSDValue::Array(v) => {
-            //  Output count of array entries
-            s.write(b"[")?;
-            s.write(&(v.len() as u32).to_be_bytes())?;
-            //  Output array entries
-            for value in v {
-                generate_value(s, value)?;
-            }
-            s.write(b"]")?
-        }
-    };
-    Ok(())
-}
-
+/*
 // Unit test
 
 #[test]
