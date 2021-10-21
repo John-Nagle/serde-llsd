@@ -30,12 +30,10 @@ use uuid;
 //
 pub const LLSDXMLPREFIX: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<llsd>\n";
 pub const LLSDXMLSENTINEL: &str = "<?xml"; // Must begin with this.
-/*
 ///    Parse LLSD expressed in XML into an LLSD tree.
-pub fn from_string(xmlstr: String) -> Result<LLSDValue, Error> {
-    from_reader(&mut Read::new(xmlstr))
+pub fn from_str(xmlstr: &str) -> Result<LLSDValue, Error> {
+    from_reader(&mut BufReader::new(xmlstr.as_bytes()))
 }
-*/
     ////let mut reader = Reader::from_str(xmlstr);
 
 /// Read XML from buffered source and parse into LLSDValue.
