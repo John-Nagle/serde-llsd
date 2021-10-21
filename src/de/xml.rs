@@ -23,19 +23,24 @@ use quick_xml::events::attributes::Attributes;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::{Read, BufRead, BufReader};
 use uuid;
 //
 //  Constants
 //
 pub const LLSDXMLPREFIX: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<llsd>\n";
 pub const LLSDXMLSENTINEL: &str = "<?xml"; // Must begin with this.
-const INDENT: usize = 4; // indent 4 spaces if asked
 /*
-
 ///    Parse LLSD expressed in XML into an LLSD tree.
-pub fn parse(xmlstr: &str) -> Result<LLSDValue, Error> {
-    let mut reader = Reader::from_str(xmlstr);
+pub fn from_string(xmlstr: String) -> Result<LLSDValue, Error> {
+    from_reader(&mut Read::new(xmlstr))
+}
+*/
+    ////let mut reader = Reader::from_str(xmlstr);
+
+/// Read XML from buffered source and parse into LLSDValue.
+pub fn from_reader<R: BufRead>(rdr: &mut R) -> Result<LLSDValue, Error> {
+    let mut reader = Reader::from_reader(rdr);  // create an XML reader from a sequential reader
     reader.trim_text(true); // do not want trailing blanks
     reader.expand_empty_elements(true); // want end tag events always
     let mut buf = Vec::new(); // reader work area
@@ -98,8 +103,9 @@ pub fn parse(xmlstr: &str) -> Result<LLSDValue, Error> {
 }
 
 /// Parse one value - real, integer, map, etc. Recursive.
-fn parse_value(
-    reader: &mut Reader<&[u8]>,
+////fn parse_value<R: Read+BufRead>(rdr: &mut R) -> Result<LLSDValue, Error> {
+fn parse_value<R: BufRead>(
+    reader: &mut Reader<&mut R>,
     starttag: &str,
     attrs: &Attributes,
 ) -> Result<LLSDValue, Error> {
@@ -118,8 +124,8 @@ fn parse_value(
 }
 
 /// Parse one value - real, integer, map, etc. Recursive.
-fn parse_primitive_value(
-    reader: &mut Reader<&[u8]>,
+fn parse_primitive_value<R: BufRead>(
+    reader: &mut Reader<&mut R>,
     starttag: &str,
     attrs: &Attributes,
 ) -> Result<LLSDValue, Error> {
@@ -199,7 +205,7 @@ fn parse_primitive_value(
 }
 
 //  Parse one map.
-fn parse_map(reader: &mut Reader<&[u8]>) -> Result<LLSDValue, Error> {
+fn parse_map<R: BufRead>(reader: &mut Reader<&mut R>) -> Result<LLSDValue, Error> {
     //  Entered with a "map" start tag just parsed.
     let mut map: HashMap<String, LLSDValue> = HashMap::new(); // accumulating map
     let mut texts = Vec::new(); // accumulate text here
@@ -256,7 +262,7 @@ fn parse_map(reader: &mut Reader<&[u8]>) -> Result<LLSDValue, Error> {
 
 //  Parse one map entry.
 //  Format <key> STRING </key> LLSDVALUE
-fn parse_map_entry(reader: &mut Reader<&[u8]>) -> Result<(String, LLSDValue), Error> {
+fn parse_map_entry<R: BufRead>(reader: &mut Reader<&mut R>) -> Result<(String, LLSDValue), Error> {
     //  Entered with a "key" start tag just parsed.  Expecting text.
     let mut texts = Vec::new(); // accumulate text here
     let mut buf = Vec::new();
@@ -317,7 +323,7 @@ fn parse_map_entry(reader: &mut Reader<&[u8]>) -> Result<(String, LLSDValue), Er
 }
 
 /// Parse one LLSD object. Recursive.
-fn parse_array(reader: &mut Reader<&[u8]>) -> Result<LLSDValue, Error> {
+fn parse_array<R: BufRead>(reader: &mut Reader<&mut R>) -> Result<LLSDValue, Error> {
     //  Entered with an <array> tag just parsed.
     let mut texts = Vec::new(); // accumulate text here
     let mut buf = Vec::new();
@@ -422,7 +428,7 @@ fn get_attr<'a>(attrs: &'a Attributes, key: &[u8]) -> Result<Option<String>, Err
     }
     Ok(None)
 }
-
+/*
 /// Pretty prints out the value as XML. Indents by 4 spaces if requested.
 pub fn to_xml_string(val: &LLSDValue, do_indent: bool) -> Result<String, Error> {
     let mut s: Vec<u8> = Vec::new();

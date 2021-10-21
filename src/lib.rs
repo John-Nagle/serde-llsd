@@ -22,6 +22,7 @@ pub mod error;
 pub use crate::{
     ser::{
         xml::to_string,
+        xml::to_writer,
         ////	binary,////::{ to_bytes, to_writer, to_writer_buffered },
     },
     de::{

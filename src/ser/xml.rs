@@ -13,6 +13,8 @@
 //  February, 2021.
 //  License: LGPL.
 //
+//
+//  Much like Serde-JSON, this will serialize and de-serialize only trees of LLSDValue items.
 
 use crate::LLSDValue;	
 use anyhow::{Error};
@@ -26,16 +28,14 @@ pub const LLSDXMLPREFIX: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ll
 pub const LLSDXMLSENTINEL: &str = "<?xml"; // Must begin with this.
 const INDENT: usize = 4; // indent 4 spaces if asked
 
-pub struct Serializer {
-    // This string starts empty and XML LLSD is appended as values are serialized.
-    output: String,
-}
+
 
 // By convention, the public API of a Serde serializer is one or more `to_abc`
 // functions such as `to_string`, `to_bytes`, or `to_writer` depending on what
 // Rust types the serializer is able to produce as output.
 //
 
+/// LLSDValue to Writer
 pub fn to_writer<W: Write>(writer: &mut W, value: &LLSDValue, do_indent: bool) -> Result<(), Error> {
     write!(writer, "{}", LLSDXMLPREFIX)?; // Standard XML prefix
     generate_value(writer, value, if do_indent { INDENT } else { 0 }, 0);
@@ -43,22 +43,8 @@ pub fn to_writer<W: Write>(writer: &mut W, value: &LLSDValue, do_indent: bool) -
     writer.flush()?;
     Ok(())
 }
-/*
-pub fn to_string_xxx<T>(value: &T) -> Result<String>
-where
-    T: Serialize,
-{
-    let mut serializer = Serializer {
-        output: String::new(),
-    };
-    value.serialize(&mut serializer)?;
-    Ok(serializer.output)
-}
 
-impl<'a> se	r::Serializer for &'a mut Serializer {
-}
-*/	
-
+/// LLSDValue to String.
 /// Pretty prints out the value as XML. Indents by 4 spaces if requested.
 pub fn to_string(val: &LLSDValue, do_indent: bool) -> Result<String, Error> {
     let mut s: Vec<u8> = Vec::new();
