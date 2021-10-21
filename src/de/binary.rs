@@ -65,11 +65,13 @@ fn parse_value(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
     fn read_variable(cursor: &mut dyn Read) -> Result<Vec<u8>, Error> {
         let length = read_u32(cursor)?; // read length in bytes
         let mut buf = vec![0u8; length as usize];
+        println!("Read variable: {} bytes", length);    // ***TEMP***
         cursor.read_exact(&mut buf)?;
         Ok(buf) // read bytes of string
     }
 
     let typecode = read_u8(cursor)?;
+    let result = // ***TEMP***
     match typecode {
         //  Undefined - the empty value
         b'!' => Ok(LLSDValue::Undefined),
@@ -136,7 +138,9 @@ fn parse_value(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
         }
 
         _ => Err(anyhow!("Binary LLSD, unexpected type code {:?}", typecode)),
-    }
+    };
+    println!("Result: {:?}", result);   // ***TEMP***
+    result // ***TEMP***
 }
 
 // Unit test
@@ -153,12 +157,13 @@ fn binaryparsetest1() {
     .collect();
     let test1: LLSDValue = LLSDValue::Array(vec![
         LLSDValue::Real(123.5),
-        LLSDValue::Integer(42),
         LLSDValue::Map(test1map),
+        LLSDValue::Integer(42),
         LLSDValue::String("Hello world".to_string()),
     ]);
     //  Convert to binary form.
     let test1bin = crate::to_bytes(&test1).unwrap();
+    println!("Binary form: {:?}", test1bin);
     //  Convert back to value form.
     let test1value = from_bytes(&test1bin[LLSDBINARYSENTINEL.len()..]).unwrap();
     println!("Value after round-trip conversion: {:?}", test1value);

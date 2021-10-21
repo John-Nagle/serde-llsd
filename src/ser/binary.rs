@@ -43,7 +43,7 @@ fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue) -> Result<(), Error
         LLSDValue::Undefined => writer.write_all(b"!")?,
         LLSDValue::Boolean(v) => writer.write_all(if *v { b"1" } else { b"0" })?,
         LLSDValue::String(v) => {
-            writer.write_all(b"writer")?;
+            writer.write_all(b"s")?;
             writer.write_all(&(v.len() as u32).to_be_bytes())?;
             writer.write_all(v.as_bytes())?
         }
