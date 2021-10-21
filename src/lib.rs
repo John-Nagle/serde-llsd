@@ -26,7 +26,8 @@ pub use crate::{
         ////	binary,////::{ to_bytes, to_writer, to_writer_buffered },
     },
     de::{
-        ////xml,////::from_str,
+        xml::from_str,
+        xml::from_reader,
         ////binary,////	{ from_bytes, from_reader, from_reader_buffered },
     },
 };
