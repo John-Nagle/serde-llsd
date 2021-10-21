@@ -49,7 +49,7 @@ pub fn from_reader<R: BufRead>(rdr: &mut R) -> Result<LLSDValue, Error> {
             Ok(Event::Start(ref e)) => {
                 match e.name() {
                     b"llsd" => {
-                        if output.is_some() {
+       	                 if output.is_some() {
                             return Err(anyhow!("More than one <llsd> block in data"));
                         }
                         let mut buf2 = Vec::new();
@@ -426,100 +426,7 @@ fn get_attr<'a>(attrs: &'a Attributes, key: &[u8]) -> Result<Option<String>, Err
     }
     Ok(None)
 }
-/*
-/// Pretty prints out the value as XML. Indents by 4 spaces if requested.
-pub fn to_xml_string(val: &LLSDValue, do_indent: bool) -> Result<String, Error> {
-    let mut s: Vec<u8> = Vec::new();
-    write!(s, "{}", LLSDXMLPREFIX)?; // Standard XML prefix
-    generate_value(&mut s, val, if do_indent { INDENT } else { 0 }, 0);
-    write!(s, "</llsd>")?;
-    s.flush()?;
-    Ok(std::str::from_utf8(&s)?.to_string())
-}
 
-/// Generate one <TYPE> VALUE </TYPE> output. VALUE is recursive.
-fn generate_value(s: &mut Vec<u8>, val: &LLSDValue, spaces: usize, indent: usize) {
-    //  Output a single tag
-    fn tag(s: &mut Vec<u8>, tag: &str, close: bool, indent: usize) {
-        if indent > 0 {
-            let _ = write!(*s, "{:1$}", " ", indent);
-        };
-        let _ = write!(*s, "<{}{}>\n", if close { "/" } else { "" }, tag);
-    }
-
-    //  Internal fn - write out one tag with a value.
-    fn tag_value(s: &mut Vec<u8>, tag: &str, text: &str, indent: usize) {
-        if indent > 0 {
-            let _ = write!(*s, "{:1$}", " ", indent);
-        };
-        if text.is_empty() {
-            // if empty, write as null tag
-            let _ = write!(*s, "<{} />\n", tag);
-        } else {
-            let _ = write!(*s, "<{}>{}</{}>\n", tag, xml_escape(text), tag);
-        }
-    }
-
-    //  Use SL "nan", not Rust "NaN"
-    fn f64_to_xml(v: f64) -> String {
-        let ss = v.to_string();
-        if ss == "NaN" {
-            "nan".to_string()
-        } else {
-            ss
-        }
-    }
-    //  Emit XML for all possible types.
-    match val {
-        LLSDValue::Undefined => tag_value(s, "undef", "", indent),
-        LLSDValue::Boolean(v) => tag_value(s, "boolean", if *v { "true" } else { "false" }, indent),
-        LLSDValue::String(v) => tag_value(s, "string", v.as_str(), indent),
-        LLSDValue::URI(v) => tag_value(s, "uri", v.as_str(), indent),
-        LLSDValue::Integer(v) => tag_value(s, "integer", v.to_string().as_str(), indent),
-        LLSDValue::Real(v) => tag_value(s, "real", f64_to_xml(*v).as_str(), indent),
-        LLSDValue::UUID(v) => tag_value(s, "uuid", v.to_string().as_str(), indent),
-        LLSDValue::Binary(v) => tag_value(s, "binary", base64::encode(v).as_str(), indent),
-        LLSDValue::Date(v) => tag_value(
-            s,
-            "date",
-            &chrono::Utc
-                .timestamp(*v, 0)
-                .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-            indent,
-        ),
-        LLSDValue::Map(v) => {
-            tag(s, "map", false, indent);
-            for (key, value) in v {
-                tag_value(s, "key", key, indent + spaces);
-                generate_value(s, value, spaces, indent + spaces);
-            }
-            tag(s, "map", true, indent);
-        }
-        LLSDValue::Array(v) => {
-            tag(s, "array", false, indent);
-            for value in v {
-                generate_value(s, value, spaces, indent + spaces);
-            }
-            tag(s, "array", true, indent);
-        }
-    };
-}
-
-/// XML standard character escapes.
-fn xml_escape(unescaped: &str) -> String {
-    let mut s = String::new();
-    for ch in unescaped.chars() {
-        match ch {
-            '<' => s += "&lt;",
-            '>' => s += "&gt;",
-            '\'' => s += "&apos;",
-            '&' => s += "&amp;",
-            '"' => s += "&quot;",
-            _ => s.push(ch),
-        }
-    }
-    s
-}
 
 // Unit tests
 
@@ -586,28 +493,27 @@ fn xmlparsetest1() {
     fn trytestcase(teststr: &str) {
         //  Internal utility function.
         //  Parse canned XML test case into internal format.
-        //  Must not contain NaN, because NaN != Nan and the equal test will
-        let parsed1 = parse(teststr).unwrap();
+        //  Must not contain NaN, because NaN != Nan and the equal test will fail
+        let parsed1 = from_str(teststr).unwrap();
         println!("Parse of {}: \n{:#?}", teststr, parsed1);
         //  Generate XML back from parsed version.
-        let generated = to_xml_string(&parsed1, true).unwrap();
+        let generated = crate::ser::xml::to_string(&parsed1, true).unwrap();
         //  Parse that.
-        let parsed2 = parse(&generated).unwrap();
+        let parsed2 = from_str(&generated).unwrap();
         //  Check that parses match.
         assert_eq!(parsed1, parsed2);
     }
     trytestcase(TESTXML1);
     //  Test NAN case
     {
-        let parsed1 = parse(TESTXMLNAN).unwrap();
+        let parsed1 = from_str(TESTXMLNAN).unwrap();
         println!("Parse of {}: \n{:#?}", TESTXMLNAN, parsed1);
         //  Generate XML back from parsed version.
-        let generated = to_xml_string(&parsed1, true).unwrap();
+        let generated = crate::ser::xml::to_string(&parsed1, true).unwrap();
         //  Remove all white space for comparison
         let s1 = TESTXMLNAN.replace(" ", "").replace("\n", "");
         let s2 = generated.replace(" ", "").replace("\n", "");
         assert_eq!(s1, s2);
     }
 }
-*/
 
