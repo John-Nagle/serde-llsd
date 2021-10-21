@@ -35,7 +35,14 @@ pub struct Serializer {
 // functions such as `to_string`, `to_bytes`, or `to_writer` depending on what
 // Rust types the serializer is able to produce as output.
 //
-// This basic serializer supports only `to_string`.
+
+pub fn to_writer<W: Write>(writer: &mut W, value: &LLSDValue, do_indent: bool) -> Result<(), Error> {
+    write!(writer, "{}", LLSDXMLPREFIX)?; // Standard XML prefix
+    generate_value(writer, value, if do_indent { INDENT } else { 0 }, 0);
+    write!(writer, "</llsd>")?;
+    writer.flush()?;
+    Ok(())
+}
 /*
 pub fn to_string_xxx<T>(value: &T) -> Result<String>
 where
@@ -48,9 +55,9 @@ where
     Ok(serializer.output)
 }
 
-impl<'a> ser::Serializer for &'a mut Serializer {
+impl<'a> se	r::Serializer for &'a mut Serializer {
 }
-*/
+*/	
 
 /// Pretty prints out the value as XML. Indents by 4 spaces if requested.
 pub fn to_string(val: &LLSDValue, do_indent: bool) -> Result<String, Error> {
@@ -63,25 +70,25 @@ pub fn to_string(val: &LLSDValue, do_indent: bool) -> Result<String, Error> {
 }
 
 /// Generate one <TYPE> VALUE </TYPE> output. VALUE is recursive.
-fn generate_value(s: &mut Vec<u8>, val: &LLSDValue, spaces: usize, indent: usize) {
+fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue, spaces: usize, indent: usize) {
     //  Output a single tag
-    fn tag(s: &mut Vec<u8>, tag: &str, close: bool, indent: usize) {
+    fn tag<W: Write>(writer: &mut W, tag: &str, close: bool, indent: usize) {
         if indent > 0 {
-            let _ = write!(*s, "{:1$}", " ", indent);
+            let _ = write!(writer, "{:1$}", " ", indent);
         };
-        let _ = write!(*s, "<{}{}>\n", if close { "/" } else { "" }, tag);
+        let _ = write!(writer, "<{}{}>\n", if close { "/" } else { "" }, tag);
     }
 
     //  Internal fn - write out one tag with a value.
-    fn tag_value(s: &mut Vec<u8>, tag: &str, text: &str, indent: usize) {
+    fn tag_value<W: Write>(writer: &mut W, tag: &str, text: &str, indent: usize) {
         if indent > 0 {
-            let _ = write!(*s, "{:1$}", " ", indent);
+            let _ = write!(writer, "{:1$}", " ", indent);
         };
         if text.is_empty() {
             // if empty, write as null tag
-            let _ = write!(*s, "<{} />\n", tag);
+            let _ = write!(writer, "<{} />\n", tag);
         } else {
-            let _ = write!(*s, "<{}>{}</{}>\n", tag, xml_escape(text), tag);
+            let _ = write!(writer, "<{}>{}</{}>\n", tag, xml_escape(text), tag);
         }
     }
 
@@ -96,16 +103,16 @@ fn generate_value(s: &mut Vec<u8>, val: &LLSDValue, spaces: usize, indent: usize
     }
     //  Emit XML for all possible types.
     match val {
-        LLSDValue::Undefined => tag_value(s, "undef", "", indent),
-        LLSDValue::Boolean(v) => tag_value(s, "boolean", if *v { "true" } else { "false" }, indent),
-        LLSDValue::String(v) => tag_value(s, "string", v.as_str(), indent),
-        LLSDValue::URI(v) => tag_value(s, "uri", v.as_str(), indent),
-        LLSDValue::Integer(v) => tag_value(s, "integer", v.to_string().as_str(), indent),
-        LLSDValue::Real(v) => tag_value(s, "real", f64_to_xml(*v).as_str(), indent),
-        LLSDValue::UUID(v) => tag_value(s, "uuid", v.to_string().as_str(), indent),
-        LLSDValue::Binary(v) => tag_value(s, "binary", base64::encode(v).as_str(), indent),
+        LLSDValue::Undefined => tag_value(writer, "undef", "", indent),
+        LLSDValue::Boolean(v) => tag_value(writer, "boolean", if *v { "true" } else { "false" }, indent),
+        LLSDValue::String(v) => tag_value(writer, "string", v.as_str(), indent),
+        LLSDValue::URI(v) => tag_value(writer, "uri", v.as_str(), indent),
+        LLSDValue::Integer(v) => tag_value(writer, "integer", v.to_string().as_str(), indent),
+        LLSDValue::Real(v) => tag_value(writer, "real", f64_to_xml(*v).as_str(), indent),
+        LLSDValue::UUID(v) => tag_value(writer, "uuid", v.to_string().as_str(), indent),
+        LLSDValue::Binary(v) => tag_value(writer, "binary", base64::encode(v).as_str(), indent),
         LLSDValue::Date(v) => tag_value(
-            s,
+            writer,
             "date",
             &chrono::Utc
                 .timestamp(*v, 0)
@@ -113,19 +120,19 @@ fn generate_value(s: &mut Vec<u8>, val: &LLSDValue, spaces: usize, indent: usize
             indent,
         ),
         LLSDValue::Map(v) => {
-            tag(s, "map", false, indent);
+            tag(writer, "map", false, indent);
             for (key, value) in v {
-                tag_value(s, "key", key, indent + spaces);
-                generate_value(s, value, spaces, indent + spaces);
+                tag_value(writer, "key", key, indent + spaces);
+                generate_value(writer, value, spaces, indent + spaces);
             }
-            tag(s, "map", true, indent);
+            tag(writer, "map", true, indent);
         }
         LLSDValue::Array(v) => {
-            tag(s, "array", false, indent);
+            tag(writer, "array", false, indent);
             for value in v {
-                generate_value(s, value, spaces, indent + spaces);
+                generate_value(writer, value, spaces, indent + spaces);
             }
-            tag(s, "array", true, indent);
+            tag(writer, "array", true, indent);
         }
     };
 }
