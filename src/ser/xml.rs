@@ -62,10 +62,7 @@ impl<'a> se	r::Serializer for &'a mut Serializer {
 /// Pretty prints out the value as XML. Indents by 4 spaces if requested.
 pub fn to_string(val: &LLSDValue, do_indent: bool) -> Result<String, Error> {
     let mut s: Vec<u8> = Vec::new();
-    write!(s, "{}", LLSDXMLPREFIX)?; // Standard XML prefix
-    generate_value(&mut s, val, if do_indent { INDENT } else { 0 }, 0);
-    write!(s, "</llsd>")?;
-    s.flush()?;
+    to_writer(&mut s, val, do_indent)?;
     Ok(std::str::from_utf8(&s)?.to_string())
 }
 
