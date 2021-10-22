@@ -21,14 +21,14 @@ pub mod ser;
 
 pub use crate::{
     de::{
+        binary::from_bytes,
+        ////binary::from_reader,    // Name clash
         xml::from_reader,
-        ////binary,////	{ from_bytes, from_reader, from_reader_buffered },
         xml::from_str,
     },
     ser::{
         binary::to_bytes,
         ////binary::to_writer,  // Name clash
-        ////	binary,////::{ to_bytes, to_writer, to_writer_buffered },
         xml::to_string,
         xml::to_writer,
     },
@@ -38,7 +38,9 @@ use enum_as_inner::EnumAsInner;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-///  The primitive LLSD data item.
+/// The primitive LLSD data item.
+/// Serialization takes a tree of these.
+/// Deserialization returns a tree of these.
 #[derive(Debug, Clone, PartialEq, EnumAsInner)]
 pub enum LLSDValue {
     Undefined,
