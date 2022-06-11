@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2018"
 authors = ["John-Nagle <nagle@animats.com>"]
 description = "Library for serializing and de-serializing data in Linden Lab Structured Data format. This format is used by Second Life and Open Simulator"
-license = "LGPL-2.1 OR LGPL=3.0"
+license = "LGPL-2.1 OR LGPL-3.0"
+repository = "https://github.com/John-Nagle/serde-llsd.git"
+homepage = "https://github.com/John-Nagle/serde-llsd"
+documentation = "https://github.com/John-Nagle/serde-llsd/README.md"
 
 [dependencies]	
 anyhow = "1.0"
