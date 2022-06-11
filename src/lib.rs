@@ -22,13 +22,13 @@ pub mod ser;
 pub use crate::{
     de::{
         binary::from_bytes,
-        binary::from_reader as binary_from_reader,    // Name clash
+        binary::from_reader as binary_from_reader, // Name clash
         xml::from_reader,
         xml::from_str,
     },
     ser::{
         binary::to_bytes,
-        binary::to_writer as binary_to_writer,  // Name clash
+        binary::to_writer as binary_to_writer, // Name clash
         xml::to_string,
         xml::to_writer,
     },
