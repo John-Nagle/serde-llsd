@@ -12,7 +12,7 @@ documentation = "https://github.com/John-Nagle/serde-llsd/README.md"
 [dependencies]	
 #   Dependencies current as May 22, 2023.
 anyhow = "1"
-quick-xml = "0.22.0"
+quick-xml = "0.23.0"
 uuid = { version = "1", features = ["v4"] }
 hex = "0.4"
 base64 = "0.13"
