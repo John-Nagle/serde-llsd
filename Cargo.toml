@@ -1,6 +1,6 @@
 [package]
 name = "serde-llsd"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
 authors = ["John-Nagle <nagle@animats.com>"]
 description = "Library for serializing and de-serializing data in Linden Lab Structured Data format. This format is used by Second Life and Open Simulator"
@@ -10,11 +10,12 @@ homepage = "https://github.com/John-Nagle/serde-llsd"
 documentation = "https://github.com/John-Nagle/serde-llsd/README.md"
 
 [dependencies]	
-anyhow = "1.0"
+#   Dependencies current as May 22, 2023.
+anyhow = "1"
 quick-xml = "0.22.0"
-uuid = { version = "0.8.1", features = ["v4"] }
-hex = "0.4.2"
-base64 = "0.13.0"
-ascii85 = "0.2.1"
+uuid = { version = "1", features = ["v4"] }
+hex = "0.4"
+base64 = "0.13"
+ascii85 = "0.2"
 chrono = "0.4"
-enum-as-inner = "0.3"
+enum-as-inner = "0.5"
