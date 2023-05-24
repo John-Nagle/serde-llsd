@@ -413,7 +413,7 @@ fn parse_boolean(s: &str) -> Result<bool, Error> {
 }
 
 /// Search for attribute in attribute list
-fn get_attr<'a>(attrs: &'a Attributes, key: &[u8]) -> Result<Option<String>, Error> {
+fn get_attr(attrs: &Attributes, key: &[u8]) -> Result<Option<String>, Error> {
     //  Each step has a possible error, so it's hard to do this more cleanly.
     for attr in attrs.clone() {
         let a = attr?;
