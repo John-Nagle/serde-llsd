@@ -1,12 +1,11 @@
-//
-//  ser/binary -- serialize LLSD, binary form.
-//
-//  Library for serializing and de-serializing data in
-//  Linden Lab Structured Data format.
-//
-//  Format documentation is at http://wiki.secondlife.com/wiki/LLSD
-//
-//  Binary format, serialization.
+//! # ser/binary -- serialize LLSD, binary form.
+//!
+//!  Library for serializing and de-serializing data in
+//!  Linden Lab Structured Data format.
+//!
+//!  Format documentation is at http://wiki.secondlife.com/wiki/LLSD
+//!
+//!  Binary format, serialization.
 //
 //  Animats
 //  March, 2021.
@@ -18,6 +17,7 @@ use std::io::Write;
 //
 //  Constants
 //
+// Binary LLSD prefix
 pub const LLSDBINARYPREFIX: &[u8] = b"<? LLSD/Binary ?>\n"; // binary LLSD prefix
 pub const LLSDBINARYSENTINEL: &[u8] = LLSDBINARYPREFIX; // prefix must match exactly
 

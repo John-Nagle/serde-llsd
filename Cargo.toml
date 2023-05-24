@@ -7,7 +7,6 @@ description = "Library for serializing and de-serializing data in Linden Lab Str
 license = "LGPL-2.1 OR LGPL-3.0"
 repository = "https://github.com/John-Nagle/serde-llsd.git"
 homepage = "https://github.com/John-Nagle/serde-llsd"
-documentation = "https://github.com/John-Nagle/serde-llsd/README.md"
 
 [dependencies]	
 #   Dependencies current as May 22, 2023.

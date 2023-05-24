@@ -1,13 +1,12 @@
-//
-//  ser/xml.rs -- XML serializer for LLSD
-//
-//
-//  Library for serializing and de-serializing data in
-//  Linden Lab Structured Data format.
-//
-//  Format documentation is at http://wiki.secondlife.com/wiki/LLSD
-//
-//  XML format.
+//! #  ser/xml.rs -- XML serializer for LLSD
+//!
+//!
+//!  Library for serializing and de-serializing data in
+//!  Linden Lab Structured Data format.
+//!
+//!  Format documentation is at http://wiki.secondlife.com/wiki/LLSD
+//!
+//!  XML format.
 //
 //  Animats
 //  February, 2021.

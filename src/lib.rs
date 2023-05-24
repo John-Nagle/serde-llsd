@@ -1,12 +1,11 @@
-//
-//  lib.rs
-//
-//  Rust library for serializing and de-serializing data in
-//  Linden Lab Structured Data format.
-//
-//  Serde version.
-//
-//  Format documentation is at http://wiki.secondlife.com/wiki/LLSD
+//! # lib.rs
+//!
+//!  Rust library for serializing and de-serializing data in
+//!  Linden Lab Structured Data format.
+//!
+//!  Serde version.
+//!
+//!  Format documentation is at http://wiki.secondlife.com/wiki/LLSD
 //
 //  Animats
 //  October, 2021.
@@ -16,7 +15,6 @@
 //  Modules
 //
 pub mod de;
-pub mod error;
 pub mod ser;
 
 pub use crate::{
@@ -43,15 +41,26 @@ use uuid::Uuid;
 /// Deserialization returns a tree of these.
 #[derive(Debug, Clone, PartialEq, EnumAsInner)]
 pub enum LLSDValue {
+    /// Not convertable.
     Undefined,
+    /// Boolean
     Boolean(bool),
+    /// Real, always 64-bit.
     Real(f64),
+    /// Integer, always 32 bit, for historical reasons.
     Integer(i32),
+    /// UUID, as a binary 128 bit value.
     UUID(Uuid),
+    /// String, UTF-8.
     String(String),
+    /// Date, as seconds relative to the UNIX epoch, January 1, 1970.
     Date(i64),
+    /// Universal Resource Identifier
     URI(String),
+    /// Array of bytes.
     Binary(Vec<u8>),
+    /// Key/value set of more LLSDValue items.
     Map(HashMap<String, LLSDValue>),
+    /// Array of more LLSDValue items.
     Array(Vec<LLSDValue>),
 }

@@ -1,12 +1,11 @@
-//
-//  de/binary -- de-serialize LLSD, binary form.
-//
-//  Library for serializing and de-serializing data in
-//  Linden Lab Structured Data format.
-//
-//  Format documentation is at http://wiki.secondlife.com/wiki/LLSD
-//
-//  Binary format.
+//! #  de/binary -- de-serialize LLSD, binary form.
+//!
+//!  Library for serializing and de-serializing data in
+//!  Linden Lab Structured Data format.
+//!
+//!  Format documentation is at http://wiki.secondlife.com/wiki/LLSD
+//!
+//!  Binary format.
 //
 //  Animats
 //  March, 2021.
