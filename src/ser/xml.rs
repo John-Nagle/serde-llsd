@@ -103,7 +103,7 @@ fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue, spaces: usize, inde
             &chrono::Utc
                 .timestamp_opt(*v, 0)
                 .earliest()
-                .unwrap()   // may panic for times prior to January 1, 1970.
+                .unwrap() // may panic for times prior to January 1, 1970.
                 .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             indent,
         ),
