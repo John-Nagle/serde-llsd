@@ -1,8 +1,6 @@
 # serde-llsd
 Serialization library for Linden Lab Serial Data format. Rust/Serde version.
 
-
-
 Linden Lab Structured Data (LLSD) serialization
 
 This is a serialization system used by Second Life and Open Simulator. 
@@ -11,7 +9,7 @@ It is documented here: http://wiki.secondlife.com/wiki/LLSD
 ## Introduction
 
 There are three formats - XML, binary, and "Notation". All store
-the same data, which is roughly what JSON can represent.
+the same data, which is roughly the same as what JSON can represent.
 Parsing and output functions are provided.
 
 ## Status
@@ -20,7 +18,8 @@ Preliminary, but appears to work.
 XML and binary versions are implemented.
 "Notation" will not be implemented at this time.
 
-Unit tests pass. Non-Serde version tested against Second Life asset servers.
+Unit tests pass. Tested against Second Life asset servers and Open Simulator servers.
+Used by the Sharpview metaverse viewer.
 
 ## Data types
 
