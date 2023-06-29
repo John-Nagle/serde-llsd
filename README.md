@@ -13,8 +13,6 @@ the same data, which is roughly the same as what JSON can represent.
 Parsing and output functions are provided.
 
 ## Status
-Preliminary, but appears to work.
-
 XML and binary versions are implemented.
 "Notation" will not be implemented at this time.
 
