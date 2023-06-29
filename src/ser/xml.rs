@@ -17,11 +17,11 @@
 
 use crate::LLSDValue;
 use anyhow::Error;
+use base64;
+use base64::Engine;
 use chrono;
 use chrono::TimeZone;
 use std::io::Write;
-use base64;
-use base64::Engine;
 //
 //  Constants
 //
@@ -98,7 +98,12 @@ fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue, spaces: usize, inde
         LLSDValue::Integer(v) => tag_value(writer, "integer", v.to_string().as_str(), indent),
         LLSDValue::Real(v) => tag_value(writer, "real", f64_to_xml(*v).as_str(), indent),
         LLSDValue::UUID(v) => tag_value(writer, "uuid", v.to_string().as_str(), indent),
-        LLSDValue::Binary(v) => tag_value(writer, "binary", base64::engine::general_purpose::STANDARD.encode(v).as_str(), indent),
+        LLSDValue::Binary(v) => tag_value(
+            writer,
+            "binary",
+            base64::engine::general_purpose::STANDARD.encode(v).as_str(),
+            indent,
+        ),
         LLSDValue::Date(v) => tag_value(
             writer,
             "date",
