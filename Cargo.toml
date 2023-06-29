@@ -12,7 +12,7 @@ documentation = "https://docs.rs/serde_llsd/0.2.1"
 [dependencies]	
 #   Dependencies upgraded on June 28, 2023.
 anyhow = "1"
-quick-xml = "0.29"
+quick-xml = "0.23"
 uuid = { version = "1", features = ["v4"] }
 hex = "0.4"
 base64 = "0.21"

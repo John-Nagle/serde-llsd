@@ -16,9 +16,7 @@ use crate::LLSDValue;
 use anyhow::{anyhow, Error};
 use ascii85;
 use base64;
-////use chrono;
-////use chrono::TimeZone;
-////use hex;
+use base64::Engine;
 use quick_xml::events::attributes::Attributes;
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -383,7 +381,7 @@ fn parse_binary(s: &str, attrs: &Attributes) -> Result<Vec<u8>, Error> {
     };
     //  Decode appropriately.
     Ok(match encoding.as_str() {
-        "base64" => base64::decode(s)?,
+        "base64" => base64::engine::general_purpose::STANDARD.decode(s)?,
         "base16" => hex::decode(s)?,
         "base85" => match ascii85::decode(s) {
             Ok(v) => v,
