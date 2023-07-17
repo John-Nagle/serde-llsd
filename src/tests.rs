@@ -46,4 +46,15 @@ fn teststructdecode() {
         x: f32,
         y: f32,
     }
+    //  Automatic conversion from structure.
+    //  ***NOT IMPLEMENTED YET***
+/*
+    let pt = NamedPoint { name: "Home".as_string(), x: 100.0, y: 200.0 };
+    let llsd_xml = crate::to_string(pt).expect("Conversion to XML failed.");
+    //  Display as XML
+    println!(
+        "As XML: \n{}",
+        llsd_xml
+    );
+*/
 }
