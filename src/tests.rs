@@ -28,9 +28,22 @@ fn testpbrmaterialdecode() {
         .expect("PBR example failed base64 decode"); // as bytes
     let llsd = from_bytes(&bytes).expect("LLSD decode failed");
     println!("PBR asset: {:?}", llsd);
+    let llsd_xml = crate::ser::xml::to_string(&llsd, true).expect("Conversion to XML failed");
     //  Display as XML
     println!(
         "As XML: \n{}",
-        crate::ser::xml::to_string(&llsd, true).expect("Conversion to XML failed")
+        llsd_xml
     );
+}
+
+#[test]
+fn teststructdecode() {
+    //  Decode into a structure.
+    use serde::{Deserialize, Serialize};
+    #[derive(Serialize, Deserialize)]
+    struct NamedPoint {
+        name: String,
+        x: f32,
+        y: f32,
+    }
 }
