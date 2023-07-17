@@ -16,6 +16,7 @@
 //
 pub mod de;
 pub mod ser;
+mod tests;
 
 pub use crate::{
     de::{
