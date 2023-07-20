@@ -95,8 +95,9 @@ fn generate_value(writer: &mut String, val: &LLSDValue) -> Result<(), Error> {
             for (key, value) in v {
                 if !first {
                     writer.push(',');
-                    first = false;
+                    writer.push('\n');
                 }
+                first = false;
                 writer.push('\'');
                 writer.push_str(key);
                 writer.push('\'');
@@ -114,9 +115,10 @@ fn generate_value(writer: &mut String, val: &LLSDValue) -> Result<(), Error> {
             for value in v {
                 if !first {
                     writer.push(',');
-                    first = false;
+                    writer.push('\n');
                 }
-                generate_value(writer, value)?;
+                first = false;
+                generate_value(writer, value)?;           
             }
             writer.push(']');
         }
