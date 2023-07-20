@@ -14,6 +14,7 @@
 use crate::LLSDValue;
 use anyhow::Error;
 use std::io::Write;
+use chrono::{Utc, TimeZone};
 //
 //  Constants
 //
@@ -78,7 +79,11 @@ fn generate_value(writer: &mut String, val: &LLSDValue) -> Result<(), Error> {
         }
         LLSDValue::Date(v) => {
             writer.push('d');
-            todo!();    // ***NEED DATE PARSER***
+            writer.push_str(&chrono::Utc
+                .timestamp_opt(*v, 0)
+                .earliest()
+                .unwrap() // may panic for times prior to January 1, 1970.
+                .to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
         }
 
         //  Map is {  key : value, key : value ... }
@@ -119,12 +124,19 @@ fn generate_value(writer: &mut String, val: &LLSDValue) -> Result<(), Error> {
     Ok(())
 }
 
-/// Escape double quote as \"
+/// Escape double quote as \", and of course \ as \\.
 fn escape_quotes(s: &str) -> String {
-    todo!()
+    let mut writer = String::new();
+    for ch in s.chars() {
+        match ch {
+            '"' | '\\' => { writer.push('\\'); writer.push(ch) }
+            _ => writer.push(ch)
+        }
+    }     
+    writer
 }
 
 /// Escape URL per RFC1738
 fn escape_url(s: &str) -> String {
-    todo!()
+    urlencoding::encode(s).to_string()
 }
