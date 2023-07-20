@@ -18,18 +18,19 @@ use std::io::Write;
 //  Constants
 //
 /// Notation LLSD prefix
-pub const LLSDNOTATIONPREFIX: &[u8] = b"<? llsd/notation ?>\n"; 
+pub const LLSDNOTATIONPREFIX: &str = "<? llsd/notation ?>\n"; 
 /// Sentinel, must match exactly.
-pub const LLSDNOTATIONSENTINEL: &[u8] = LLSDNOTATIONPREFIX; 
+pub const LLSDNOTATIONSENTINEL: &str = LLSDNOTATIONPREFIX; 
 
 /// Outputs an LLSDValue as a string of bytes, in LLSD "binary" format.
 pub fn to_string(val: &LLSDValue) -> Result<String, Error> {
-    let mut writer: String = String::new(); // just make a stream and use the stream form
-    todo!();
-    ////to_writer(&mut writer, val)?;
+    let mut writer = String::new();
+    writer.push_str(LLSDNOTATIONPREFIX); // prefix
+    generate_value(&mut writer, val)?;
     Ok(writer)
 }
 
+/*
 /// Outputs an LLSD value to an output stream
 pub fn to_writer<W: Write>(writer: &mut W, val: &LLSDValue) -> Result<(), Error> {
     writer.write_all(LLSDNOTATIONPREFIX)?; // prefix
@@ -37,73 +38,93 @@ pub fn to_writer<W: Write>(writer: &mut W, val: &LLSDValue) -> Result<(), Error>
     writer.flush()?;
     Ok(())
 }
+*/
 /// Generate one <TYPE> VALUE </TYPE> output. VALUE is recursive.
-fn generate_value<W: Write>(writer: &mut W, val: &LLSDValue) -> Result<(), Error> {
-    todo!();
-}
-/*
-    //  Emit binary for all possible types.
+fn generate_value(writer: &mut String, val: &LLSDValue) -> Result<(), Error> {
+    //  Emit notation form for all possible types.
     match val {
-        LLSDValue::Undefined => writer.write_all(b"!")?,
-        LLSDValue::Boolean(v) => writer.write_all(if *v { b"1" } else { b"0" })?,
+        LLSDValue::Undefined => writer.push('!'),
+        LLSDValue::Boolean(v) => writer.push(if *v { 'T' } else { 'F' }),
         LLSDValue::String(v) => {
-            writer.write_all(b"s")?;
-            writer.write_all(&(v.len() as u32).to_be_bytes())?;
-            writer.write_all(v.as_bytes())?
+            writer.push('"');
+            writer.push_str(&escape_quotes(v));
+            writer.push('"');
         }
         LLSDValue::URI(v) => {
-            writer.write_all(b"l")?;
-            writer.write_all(&(v.len() as u32).to_be_bytes())?;
-            writer.write_all(v.as_bytes())?
+            writer.push('l');
+            writer.push('"');
+            writer.push_str(&escape_url(v));
+            writer.push('"');
         }
         LLSDValue::Integer(v) => {
-            writer.write_all(b"i")?;
-            writer.write_all(&v.to_be_bytes())?
+            writer.push('i');
+            writer.push_str(&format!("{}",v));
         }
         LLSDValue::Real(v) => {
-            writer.write_all(b"r")?;
-            writer.write_all(&v.to_be_bytes())?
+            writer.push('r');
+            writer.push_str(&format!("{}",v));
         }
         LLSDValue::UUID(v) => {
-            writer.write_all(b"u")?;
-            writer.write_all(v.as_bytes())?
+            writer.push('u');
+            writer.push_str(&v.to_string());
         }
         LLSDValue::Binary(v) => {
-            writer.write_all(b"b")?;
-            writer.write_all(&(v.len() as u32).to_be_bytes())?;
-            writer.write_all(v)?
+            writer.push('b');
+            writer.push('1');
+            writer.push('6');
+            writer.push('"');
+            writer.push_str(&hex::encode(v));
+            writer.push('"');
         }
         LLSDValue::Date(v) => {
-            writer.write_all(b"d")?;
-            writer.write_all(&v.to_be_bytes())?
+            writer.push('d');
+            todo!();    // ***NEED DATE PARSER***
         }
 
-        //  Map is { childcnt key value key value ... }
+        //  Map is {  key : value, key : value ... }
         LLSDValue::Map(v) => {
-            //  Output count of key/value pairs
-            writer.write_all(b"{")?;
-            writer.write_all(&(v.len() as u32).to_be_bytes())?;
+            //  Curly bracketed list
+            writer.push('{');
             //  Output key/value pairs
+            let mut first: bool = true;
             for (key, value) in v {
-                writer.write_all(&[b'k'])?; // k prefix to key. UNDOCUMENTED
-                writer.write_all(&(key.len() as u32).to_be_bytes())?;
-                writer.write_all(key.as_bytes())?;
+                if !first {
+                    writer.push(',');
+                    first = false;
+                }
+                writer.push('\'');
+                writer.push_str(key);
+                writer.push('\'');
+                writer.push(':');
                 generate_value(writer, value)?;
             }
-            writer.write_all(b"}")?
+            writer.push('}');
         }
-        //  Array is [ childcnt child child ... ]
+        //  Array is [ child, child ... ]
         LLSDValue::Array(v) => {
-            //  Output count of array entries
-            writer.write_all(b"[")?;
-            writer.write_all(&(v.len() as u32).to_be_bytes())?;
+            //  Square bracketed list
+            writer.push('[');
             //  Output array entries
+            let mut first: bool = true;
             for value in v {
+                if !first {
+                    writer.push(',');
+                    first = false;
+                }
                 generate_value(writer, value)?;
             }
-            writer.write_all(b"]")?
+            writer.push(']');
         }
     };
     Ok(())
 }
-*/
+
+/// Escape double quote as \"
+fn escape_quotes(s: &str) -> String {
+    todo!()
+}
+
+/// Escape URL per RFC1738
+fn escape_url(s: &str) -> String {
+    todo!()
+}
