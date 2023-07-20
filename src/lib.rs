@@ -30,6 +30,7 @@ pub use crate::{
         binary::to_writer as binary_to_writer, // Name clash
         xml::to_string,
         xml::to_writer,
+        notation::to_string as notation_to_string, // Name clash
     },
 };
 

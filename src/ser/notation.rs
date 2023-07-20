@@ -140,3 +140,92 @@ fn escape_quotes(s: &str) -> String {
 fn escape_url(s: &str) -> String {
     urlencoding::encode(s).to_string()
 }
+
+//  Temporary test case
+#[test]
+fn notationgentest1() {
+    const TESTXMLNAN: &str = r#"
+<?xml version="1.0" encoding="UTF-8"?>
+<llsd>
+<array>
+<real>nan</real>
+<real>0</real>
+<undef />
+</array>
+</llsd>
+"#;
+
+    const TESTXML1: &str = r#"
+<?xml version="1.0" encoding="UTF-8"?>
+<llsd>
+<map>
+  <key>region_id</key>
+    <uuid>67153d5b-3659-afb4-8510-adda2c034649</uuid>
+  <key>scale</key>
+    <string>one minute</string>
+  <key>simulator statistics</key>
+  <map>
+    <key>time dilation</key><real>0.9878624</real>
+    <key>sim fps</key><real>44.38898</real>
+    <key>pysics fps</key><real>44.38906</real>
+    <key>lsl instructions per second</key><real>0</real>
+    <key>total task count</key><real>4</real>
+    <key>active task count</key><real>0</real>
+    <key>active script count</key><real>4</real>
+    <key>main agent count</key><real>0</real>
+    <key>child agent count</key><real>0</real>
+    <key>inbound packets per second</key><real>1.228283</real>
+    <key>outbound packets per second</key><real>1.277508</real>
+    <key>pending downloads</key><real>0</real>
+    <key>pending uploads</key><real>0.0001096525</real>
+    <key>frame ms</key><real>0.7757886</real>
+    <key>net ms</key><real>0.3152919</real>
+    <key>sim other ms</key><real>0.1826937</real>
+    <key>sim physics ms</key><real>0.04323055</real>
+    <key>agent ms</key><real>0.01599029</real>
+    <key>image ms</key><real>0.01865955</real>
+    <key>script ms</key><real>0.1338836</real>
+    <!-- Comment - some additional test values -->
+    <key>hex number</key><binary encoding="base16">0fa1</binary>
+    <key>base64 number</key><binary>SGVsbG8gd29ybGQ=</binary>
+    <key>date</key><date>2006-02-01T14:29:53Z</date>
+    <key>array</key>
+        <array>
+            <boolean>false</boolean>
+            <integer>42</integer>
+            <undef/>
+            <uuid/>
+            <boolean>1</boolean>
+        </array>
+  </map>
+</map>
+</llsd>
+"#;
+
+    fn trytestcase(teststr: &str) {
+        //  Internal utility function.
+        //  Parse canned XML test case into internal format.
+        //  Must not contain NaN, because NaN != Nan and the equal test will fail
+        let parsed1 = crate::de::xml::from_str(teststr).unwrap();
+        println!("Parse of {}: \n{:#?}", teststr, parsed1);
+        //  Generate Notation back from parsed version.
+        let generated = crate::ser::notation::to_string(&parsed1).unwrap();
+        println!("Generated Notation format:\n{}", generated);
+        /*
+        let generated = crate::ser::xml::to_string(&parsed1, true).unwrap();
+        //  Parse that.
+        let parsed2 = from_str(&generated).unwrap();
+        //  Check that parses match.
+        assert_eq!(parsed1, parsed2);
+        */
+    }
+    trytestcase(TESTXML1);
+    //  Test NAN case
+    {
+        let parsed1 =  crate::de::xml::from_str(TESTXMLNAN).unwrap();
+        println!("Parse of {}: \n{:#?}", TESTXMLNAN, parsed1);
+        //  Generate XML back from parsed version.
+        let generated = crate::ser::notation::to_string(&parsed1).unwrap();
+        println!("Generated Notation format:\n{}", generated);
+    }
+}
