@@ -15,7 +15,6 @@
 use crate::LLSDValue;
 use anyhow::{anyhow, Error};
 use std::collections::HashMap;
-use std::io::{Cursor, Read};
 use core::iter::{Peekable};
 use core::str::Chars;
 use uuid;
@@ -115,11 +114,8 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
             kvmap.insert(key, value);
             //  Check for comma indicating more items.
             consume_whitespace(cursor);
-            if let Some(ch) = cursor.peek() {
-                match ch {
-                    ',' => { let _ = cursor.next(); }   // continue with next field
-                    _ => {}
-                }
+            if let Some(',') = cursor.peek() {
+                let _ = cursor.next();    // continue with next field
             }
         }
         Ok(LLSDValue::Map(kvmap))
@@ -135,22 +131,15 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         loop {
             //  Check for end of items
             consume_whitespace(cursor);
-            if let Some(ch) = cursor.peek() {
-                match ch {
-                    ']' => { let _ = cursor.next(); break } // end of array, may be empty.
-                    _ => {}
-                }
+            if let Some(']') = cursor.peek() {
+                let _ = cursor.next(); break;    // end of array, may be empty.
             }
             array_items.push(parse_value(cursor)?);          // parse next value
             //  Check for comma indicating more items.
             consume_whitespace(cursor);
-            if let Some(ch) = cursor.peek() {
-                match ch {
-                    ',' => { let _ = cursor.next(); }   // continue with next field
-                    _ => {}
-                }
-            }
-            
+            if let Some(',') = cursor.peek() {
+                let _ = cursor.next();   // continue with next field
+            }           
         }
         Ok(LLSDValue::Array(array_items))               // return array
     }
@@ -170,12 +159,12 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         consume_whitespace(cursor);
         if let Some(ch) = cursor.next() {
             if ch != expected_ch {
-                return Err(anyhow!("Expected '{}', found '{}'.", expected_ch, ch));
+                Err(anyhow!("Expected '{}', found '{}'.", expected_ch, ch))
             } else {
                 Ok(())
             }
         } else {
-            return Err(anyhow!("Expected '{}', found end of string.", expected_ch));
+            Err(anyhow!("Expected '{}', found end of string.", expected_ch))
         }
     }
 

@@ -8,12 +8,11 @@
 //!  Notation format, serialization.
 //
 //  Animats
-//  March, 2021.
+//  July, 2023.
 //  License: LGPL.
 //
 use crate::LLSDValue;
 use anyhow::Error;
-use std::io::Write;
 use chrono::{Utc, TimeZone};
 //
 //  Constants
