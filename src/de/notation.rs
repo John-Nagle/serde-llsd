@@ -41,13 +41,27 @@ pub fn from_reader(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
 
 /// Parse one value - real, integer, map, etc. Recursive.
 fn parse_value(cursor: &mut Chars) -> Result<LLSDValue, Error> {
+    fn parse_map(cursor: &mut Chars) -> Result<LLSDValue, Error> {
+        todo!()
+    }
+    fn parse_array(cursor: &mut Chars) -> Result<LLSDValue, Error> {
+        todo!()
+    }
+
+    //
     while let Some(ch) = cursor.next() {
         match ch {
+            ' ' | '\n' => continue,                 // ignore leading white space
+            '!' => { return Ok(LLSDValue::Undefined) }    // "Undefined" as a value
+            '0' => { return Ok(LLSDValue::Boolean(false)) } // false
+            '1' => { return Ok(LLSDValue::Boolean(true)) }  // true
+            '{' => { return parse_map(cursor) }              // map
+            '[' => { return parse_array(cursor) }             // array
             //  ***MORE*** add cases
-            _ => { return Err(anyhow!("Unexpected character: {:?}", ch)); }
+            _ => { return Err(anyhow!("Unexpected character: {:?}", ch)); } // error
         }
     }
-    todo!();
+    Err(anyhow!("Premature end of string in parse"))  // error
 }
 /*
     //  These could be generic if generics with numeric parameters were in stable Rust.
