@@ -190,8 +190,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         }
     }
 
-
-    // Main function
+    // Main function. This is called recursively.
     consume_whitespace(cursor);                         // ignore leading white space
     if let Some(ch) = cursor.next() {
         match ch {
@@ -206,7 +205,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
             'r' => { parse_real(cursor) }               // real
             '"' => { Ok(LLSDValue::String(parse_quoted_string(cursor, ch)?)) }  // string, double quoted
             '\'' => { Ok(LLSDValue::String(parse_quoted_string(cursor, ch)?)) }  // string, double quoted
-            //  ***MORE*** add cases
+            //  ***MORE*** add cases for UUID, URL, date, and binary.
             _ => { Err(anyhow!("Unexpected character: {:?}", ch)) } // error
         }
     } else {
