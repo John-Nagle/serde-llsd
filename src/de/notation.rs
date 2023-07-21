@@ -69,10 +69,66 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         //  Digits accmulated, use standard conversion
         Ok(LLSDValue::Real(s.parse::<f64>()?))
     }
+    
+    /// Parse string. "ABC" or 'ABC', with '\' as escape.
+    fn parse_quoted_string(cursor: &mut Peekable<Chars>) -> Result<String, Error> {
+        consume_whitespace(cursor);
+        let delim = if let Some(ch) = cursor.next() {
+            match ch {
+                '\'' | '\"' => ch,
+                _ => { return Err(anyhow!("String started with '{}' instead of quote.", ch)); }
+            }
+        } else {
+            return Err(anyhow!("String started with EOF instead of quote."));
+        };
+        let mut s = String::with_capacity(128);           // allocate reasonably large size
+        loop {
+            let ch_opt = cursor.next();
+            match ch_opt {
+                Some(delim) => { break; }
+                Some('\\') => { if let Some(ch) = cursor.next() {
+                        s.push(ch)
+                    } else {
+                        return Err(anyhow!("String ended with EOF instead of quote."));
+                    }
+                }
+                Some(_) => s.push(ch_opt.unwrap()), 
+                None => { return Err(anyhow!("String ended with EOF instead of quote.")); }
+            }
+        }
+        String::shrink_to_fit(&mut s);                      // release wasted space
+        Ok(s)
+    }
+    
     /// Parse "{ 'key' : value, 'key' : value ... }
     fn parse_map(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
-        todo!()
+        let mut kvmap = HashMap::new();                         // building map
+        loop {
+            consume_whitespace(cursor);
+            if let Some(ch) = cursor.peek() {
+                match ch {
+                    '}' => { let _ = cursor.next(); break } // end of map, may be empty.
+                    _ => {}
+                }
+            }
+            let key  = parse_quoted_string(cursor)?;   // key of key:value
+            consume_char(cursor, ':')?;
+            let value = parse_value(cursor)?;           // value of key:value
+            kvmap.insert(key, value);
+            //  Check for comma indicating more items.
+            consume_whitespace(cursor);
+            if let Some(ch) = cursor.peek() {
+                match ch {
+                    ',' => { let _ = cursor.next(); }   // continue with next field
+                    _ => {}
+                }
+            }
+
+        }
+        Ok(LLSDValue::Map(kvmap))
     }
+    
+        
     /// Parse "[ value, value ... ]"
     /// At this point, the '[' has been consumed.
     /// At successful return, the ending ']' has been consumed.
@@ -111,8 +167,23 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
             }
         }       
     }
+    
+    /// Consume expected non-whitespace char
+    fn consume_char(cursor: &mut Peekable<Chars>, expected_ch: char) -> Result<(), Error> {
+        consume_whitespace(cursor);
+        if let Some(ch) = cursor.next() {
+            if ch != expected_ch {
+                return Err(anyhow!("Expected '{}', found '{}'.", expected_ch, ch));
+            } else {
+                Ok(())
+            }
+        } else {
+            return Err(anyhow!("Expected '{}', found end of string.", expected_ch));
+        }
+    }
 
-    //
+
+    // Main function
     consume_whitespace(cursor);                         // ignore leading white space
     if let Some(ch) = cursor.next() {
         match ch {
@@ -233,11 +304,11 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         _ => Err(anyhow!("Binary LLSD, unexpected type code {:?}", typecode)),
     }
 }
+*/
 
-// Unit test
 
 #[test]
-fn binaryparsetest1() {
+fn notationparsetest1() {
     //  Construct a test value.
     let test1map: HashMap<String, LLSDValue> = [
         ("val1".to_string(), LLSDValue::Real(456.0)),
@@ -252,13 +323,12 @@ fn binaryparsetest1() {
         LLSDValue::Integer(42),
         LLSDValue::String("Hello world".to_string()),
     ]);
-    //  Convert to binary form.
-    let test1bin = crate::to_bytes(&test1).unwrap();
-    println!("Binary form: {:?}", test1bin);
+    //  Convert to notation
+    let test1bin = crate::notation_to_string(&test1).unwrap();
+    println!("Notation form: {:?}", test1bin);
     //  Convert back to value form.
-    let test1value = from_bytes(&test1bin[LLSDBINARYSENTINEL.len()..]).unwrap();
+    let test1value = from_str(&test1bin[LLSDNOTATIONPREFIX.len()..]).unwrap();
     println!("Value after round-trip conversion: {:?}", test1value);
     //  Check that results match after round trip.
     assert_eq!(test1, test1value);
 }
-*/
