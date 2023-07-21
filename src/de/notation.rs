@@ -41,27 +41,44 @@ pub fn from_reader(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
 
 /// Parse one value - real, integer, map, etc. Recursive.
 fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+    /// Parse "iNNN"
+    fn parse_integer(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {       
+        todo!()
+    }
+    /// Parse "{ 'key' : value, 'key' : value ... }
     fn parse_map(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         todo!()
     }
+    /// Parse "[ value, value ... ]"
     fn parse_array(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         todo!()
     }
+    
+    /// Consume whitespace. Next char will be non-whitespace.
+    fn consume_whitespace(cursor: &mut Peekable<Chars>) {
+        while let Some(ch) = cursor.peek() {
+            match ch {
+                ' ' | '\n' => { let _ = cursor.next(); },                 // ignore leading white space
+                _ => break
+            }
+        }       
+    }
 
     //
-    while let Some(ch) = cursor.next() {
+    consume_whitespace(cursor);                         // ignore leading white space
+    if let Some(ch) = cursor.next() {
         match ch {
-            ' ' | '\n' => continue,                 // ignore leading white space
-            '!' => { return Ok(LLSDValue::Undefined) }    // "Undefined" as a value
-            '0' => { return Ok(LLSDValue::Boolean(false)) } // false
-            '1' => { return Ok(LLSDValue::Boolean(true)) }  // true
-            '{' => { return parse_map(cursor) }              // map
-            '[' => { return parse_array(cursor) }             // array
+            '!' => { Ok(LLSDValue::Undefined) }    // "Undefined" as a value
+            '0' => { Ok(LLSDValue::Boolean(false)) } // false
+            '1' => { Ok(LLSDValue::Boolean(true)) }  // true
+            '{' => { parse_map(cursor) }              // map
+            '[' => { parse_array(cursor) }             // array
             //  ***MORE*** add cases
-            _ => { return Err(anyhow!("Unexpected character: {:?}", ch)); } // error
+            _ => { Err(anyhow!("Unexpected character: {:?}", ch)) } // error
         }
+    } else {
+        Err(anyhow!("Premature end of string in parse"))  // error
     }
-    Err(anyhow!("Premature end of string in parse"))  // error
 }
 /*
     //  These could be generic if generics with numeric parameters were in stable Rust.
