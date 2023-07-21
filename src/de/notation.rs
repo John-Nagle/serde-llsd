@@ -69,6 +69,28 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         Ok(LLSDValue::Real(s.parse::<f64>()?))
     }
     
+    /// Parse Boolean
+    fn parse_boolean(cursor: &mut Peekable<Chars>, first_char: char) -> Result<LLSDValue, Error> {
+        //  Accumulate next word
+        let mut s = String::with_capacity(4);
+        s.push(first_char);     // we already had the first character.        
+        loop {              
+            if let Some(ch) = cursor.peek() {
+                if ch.is_alphabetic() {
+                    s.push(cursor.next().unwrap());
+                    continue
+                }
+            }
+            break;
+        }
+        //  Check for all the allowed Boolean forms.
+        match s.as_str() {
+            "f" | "F" | "false" | "FALSE" => Ok(LLSDValue::Boolean(false)),
+            "t" | "T" | "true" | "TRUE" => Ok(LLSDValue::Boolean(true)),
+            _ => Err(anyhow!("Parsing Boolean, got {}", s)) 
+        }
+    }
+    
     /// Parse string. "ABC" or 'ABC', with '\' as escape.
     fn parse_quoted_string(cursor: &mut Peekable<Chars>, delim: char) -> Result<String, Error> {
         consume_whitespace(cursor);
@@ -176,6 +198,8 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
             '!' => { Ok(LLSDValue::Undefined) }         // "Undefined" as a value
             '0' => { Ok(LLSDValue::Boolean(false)) }    // false
             '1' => { Ok(LLSDValue::Boolean(true)) }     // true
+            'f' | 'F' => { parse_boolean(cursor, ch) }  // false, all alpha forms
+            't' | 'T' => { parse_boolean(cursor, ch) }  // true, all alpha forms
             '{' => { parse_map(cursor) }                // map
             '[' => { parse_array(cursor) }              // array
             'i' => { parse_integer(cursor) }            // integer
