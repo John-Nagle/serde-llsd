@@ -16,6 +16,8 @@ use crate::LLSDValue;
 use anyhow::{anyhow, Error};
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
+use std::iter::{Iterator};
+use core::str::Chars;
 use uuid;
 //
 //  Constants
@@ -27,20 +29,24 @@ pub const LLSDNOTATIONSENTINEL: &[u8] = LLSDNOTATIONPREFIX;
 
 ///    Parse LLSD string expressed in notation format into an LLSDObject tree. No header.
 pub fn from_str(notation_str: &str) -> Result<LLSDValue, Error> {
-    todo!();
-    ////from_reader(&mut BufReader::new(notation_str.as_bytes()))
-    ////let mut cursor: Cursor<&[u8]> = Cursor::new(b);
-    ////parse_value(&mut cursor)
+    let mut cursor = notation_str.chars();
+    parse_value(&mut cursor)
 }
-
+/*
 ///    Parse LLSD reader expressed in binary into an LLSDObject tree. No header.
 pub fn from_reader(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
     todo!();
-    ////parse_value(cursor)
 }
+*/
 
 /// Parse one value - real, integer, map, etc. Recursive.
-fn parse_value(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
+fn parse_value(cursor: &mut Chars) -> Result<LLSDValue, Error> {
+    while let Some(ch) = cursor.next() {
+        match ch {
+            //  ***MORE*** add cases
+            _ => { return Err(anyhow!("Unexpected character: {:?}", ch)); }
+        }
+    }
     todo!();
 }
 /*
