@@ -42,8 +42,32 @@ pub fn from_reader(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
 /// Parse one value - real, integer, map, etc. Recursive.
 fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     /// Parse "iNNN"
-    fn parse_integer(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {       
-        todo!()
+    fn parse_integer(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+        let mut s = String::with_capacity(20);  // pre-allocate; can still grow
+        //  Accumulate numeric chars.
+        while let Some(ch) = cursor.peek() {
+            match ch {
+                '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'+'|'-' => s.push(cursor.next().unwrap()),
+                 _ => break
+            }
+        }
+        //  Digits accmulated, use standard conversion
+        Ok(LLSDValue::Integer(s.parse::<i32>()?))
+    }
+    
+    /// Parse "rNNN".
+    //  Does "notation" allow exponents?
+    fn parse_real(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+        let mut s = String::with_capacity(20);  // pre-allocate; can still grow
+        //  Accumulate numeric chars.
+        while let Some(ch) = cursor.peek() {
+            match ch {
+                '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'+'|'-'|'.' => s.push(cursor.next().unwrap()),
+                 _ => break
+            }
+        }
+        //  Digits accmulated, use standard conversion
+        Ok(LLSDValue::Real(s.parse::<f64>()?))
     }
     /// Parse "{ 'key' : value, 'key' : value ... }
     fn parse_map(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
@@ -68,11 +92,13 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     consume_whitespace(cursor);                         // ignore leading white space
     if let Some(ch) = cursor.next() {
         match ch {
-            '!' => { Ok(LLSDValue::Undefined) }    // "Undefined" as a value
-            '0' => { Ok(LLSDValue::Boolean(false)) } // false
-            '1' => { Ok(LLSDValue::Boolean(true)) }  // true
-            '{' => { parse_map(cursor) }              // map
-            '[' => { parse_array(cursor) }             // array
+            '!' => { Ok(LLSDValue::Undefined) }         // "Undefined" as a value
+            '0' => { Ok(LLSDValue::Boolean(false)) }    // false
+            '1' => { Ok(LLSDValue::Boolean(true)) }     // true
+            '{' => { parse_map(cursor) }                // map
+            '[' => { parse_array(cursor) }              // array
+            'i' => { parse_integer(cursor) }            // integer
+            'r' => { parse_real(cursor) }               // real
             //  ***MORE*** add cases
             _ => { Err(anyhow!("Unexpected character: {:?}", ch)) } // error
         }
