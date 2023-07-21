@@ -74,8 +74,32 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         todo!()
     }
     /// Parse "[ value, value ... ]"
+    /// At this point, the '[' has been consumed.
+    /// At successful return, the ending ']' has been consumed.
     fn parse_array(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
-        todo!()
+        let mut array_items = Vec::new();
+        //  Accumulate array elements.
+        loop {
+            //  Check for end of items
+            consume_whitespace(cursor);
+            if let Some(ch) = cursor.peek() {
+                match ch {
+                    ']' => { let _ = cursor.next(); break } // end of array, may be empty.
+                    _ => {}
+                }
+            }
+            array_items.push(parse_value(cursor)?);          // parse next value
+            //  Check for comma indicating more items.
+            consume_whitespace(cursor);
+            if let Some(ch) = cursor.peek() {
+                match ch {
+                    ',' => { let _ = cursor.next(); }   // continue with next field
+                    _ => {}
+                }
+            }
+            
+        }
+        Ok(LLSDValue::Array(array_items))               // return array
     }
     
     /// Consume whitespace. Next char will be non-whitespace.
