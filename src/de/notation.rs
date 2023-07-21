@@ -71,21 +71,17 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
     
     /// Parse string. "ABC" or 'ABC', with '\' as escape.
-    fn parse_quoted_string(cursor: &mut Peekable<Chars>) -> Result<String, Error> {
+    fn parse_quoted_string(cursor: &mut Peekable<Chars>, delim: char) -> Result<String, Error> {
         consume_whitespace(cursor);
-        let delim = if let Some(ch) = cursor.next() {
-            match ch {
-                '\'' | '\"' => ch,
-                _ => { return Err(anyhow!("String started with '{}' instead of quote.", ch)); }
-            }
-        } else {
-            return Err(anyhow!("String started with EOF instead of quote."));
-        };
         let mut s = String::with_capacity(128);           // allocate reasonably large size
         loop {
             let ch_opt = cursor.next();
+            if let Some(ch) = ch_opt { 
+                if ch == delim { break };
+            } else {
+                return Err(anyhow!("String began with EOF instead of quote."))
+            }
             match ch_opt {
-                Some(delim) => { break; }
                 Some('\\') => { if let Some(ch) = cursor.next() {
                         s.push(ch)
                     } else {
@@ -105,13 +101,15 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         let mut kvmap = HashMap::new();                         // building map
         loop {
             consume_whitespace(cursor);
-            if let Some(ch) = cursor.peek() {
+            let key = if let Some(ch) = cursor.next() {
                 match ch {
                     '}' => { let _ = cursor.next(); break } // end of map, may be empty.
-                    _ => {}
+                    '\'' | '"' => parse_quoted_string(cursor, ch)?, 
+                    _ => { return Err(anyhow!("Map key began with {} instead of quote.", ch)); }
                 }
-            }
-            let key  = parse_quoted_string(cursor)?;   // key of key:value
+            } else {
+                return Err(anyhow!("Map key began with EOF instead of quote."));
+            };
             consume_char(cursor, ':')?;
             let value = parse_value(cursor)?;           // value of key:value
             kvmap.insert(key, value);
@@ -123,7 +121,6 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
                     _ => {}
                 }
             }
-
         }
         Ok(LLSDValue::Map(kvmap))
     }
@@ -194,6 +191,8 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
             '[' => { parse_array(cursor) }              // array
             'i' => { parse_integer(cursor) }            // integer
             'r' => { parse_real(cursor) }               // real
+            '"' => { Ok(LLSDValue::String(parse_quoted_string(cursor, ch)?)) }  // string, double quoted
+            '\'' => { Ok(LLSDValue::String(parse_quoted_string(cursor, ch)?)) }  // string, double quoted
             //  ***MORE*** add cases
             _ => { Err(anyhow!("Unexpected character: {:?}", ch)) } // error
         }
