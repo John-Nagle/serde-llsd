@@ -19,6 +19,8 @@ use core::iter::{Peekable};
 use core::str::Chars;
 use uuid::{Uuid};
 use chrono::DateTime;
+use base64::Engine;
+
 //
 //  Constants
 //
@@ -157,9 +159,38 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
     
     /// Parse binary value.
-    /// Format is b16"value" or b64"value"
+    /// Format is b16"value" or b64"value" or b(cnt)"value".
+    /// Not sure about that last form. Input to this is UTF-8.
+    /// Putting text in this format is just wrong, yet the LL example does it.
+    /// This conversion may fail for non-UTF8 input.
     fn parse_binary(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
-        todo!()
+        if let Some(ch) = cursor.peek() {
+            match ch {
+                '(' => {
+                    let cnt = parse_number_in_parentheses(cursor)?;
+                    consume_char(cursor, '"')?;
+                    let s = next_chunk(cursor, cnt)?;
+                    consume_char(cursor, '"')?;  // count must be correct or this will fail.
+                    Ok(LLSDValue::String(s))     // not sure about this
+                }                 
+                '1' => {
+                    consume_char(cursor, '6')?;          // base 16
+                    consume_char(cursor, '"')?;          // begin quote
+                    let s = parse_quoted_string(cursor,'"')?;
+                    Ok(LLSDValue::Binary(hex::decode(s)?))
+                }
+                '6' => {
+                    consume_char(cursor, '4')?;
+                    consume_char(cursor, '"')?;          // begin quote
+                    let s = parse_quoted_string(cursor,'"')?;
+                    let bytes = base64::engine::general_purpose::STANDARD.decode(s)?;
+                    Ok(LLSDValue::Binary(bytes))
+                }
+                _ => Err(anyhow!("Binary value started with {} instead of (, 1, or 6", ch))   
+            } 
+        } else {
+            Err(anyhow!("Binary value started with EOF"))   
+        }
     }
     
     /// Parse sized string.
