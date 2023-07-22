@@ -17,7 +17,8 @@ use anyhow::{anyhow, Error};
 use std::collections::HashMap;
 use core::iter::{Peekable};
 use core::str::Chars;
-use uuid;
+use uuid::{Uuid};
+use chrono::DateTime;
 //
 //  Constants
 //
@@ -92,6 +93,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
     
     /// Parse string. "ABC" or 'ABC', with '\' as escape.
+    /// Does not currently parse the numeric count prefix form.
     fn parse_quoted_string(cursor: &mut Peekable<Chars>, delim: char) -> Result<String, Error> {
         consume_whitespace(cursor);
         let mut s = String::with_capacity(128);           // allocate reasonably large size
@@ -119,13 +121,23 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     
     /// Parse date string
     fn parse_date(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
-        todo!()
+        if let Some(delim) = cursor.next() {
+            if delim == '"' || delim == '\'' {
+                let s = parse_quoted_string(cursor, delim)?;
+                let naive_date =  DateTime::parse_from_rfc3339(&s)?; // parse date per RFC 3339.
+                Ok(LLSDValue::Date(naive_date.timestamp())) // seconds since UNIX epoch.
+            } else {
+                Err(anyhow!("URI did not begin with '\"'"))
+            }
+        } else {
+            Err(anyhow!("URI at end of file."))
+        }
     }
     
     /// Parse URI string per rfc 1738
     fn parse_uri(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         if let Some(delim) = cursor.next() {
-            if delim == '"' {
+            if delim == '"' || delim == '\'' {
                 let s = parse_quoted_string(cursor, delim)?;
                 Ok(LLSDValue::URI(urlencoding::decode(&s)?.to_string()))
             } else {
@@ -136,12 +148,18 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         }
     }
     
-    /// Parse UUID
+    /// Parse UUID. No quotes
     fn parse_uuid(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
-        todo!()
+        const UUID_LEN: usize = "c69b29b1-8944-58ae-a7c5-2ca7b23e22fb".len();
+        let mut s = String::with_capacity(UUID_LEN);
+        //  next_chunk, for getting N chars, doesn't work yet.
+        for _ in 0..UUID_LEN {
+            s.push(cursor.next().ok_or(anyhow!("EOF parsing UUID"))?);
+        }
+        Ok(LLSDValue::UUID(Uuid::parse_str(&s)?))
     }
     
-    /// Parse binary value
+    /// Parse binary value.
     fn parse_binary(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         todo!()
     }
@@ -172,7 +190,6 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         }
         Ok(LLSDValue::Map(kvmap))
     }
-    
         
     /// Parse "[ value, value ... ]"
     /// At this point, the '[' has been consumed.
