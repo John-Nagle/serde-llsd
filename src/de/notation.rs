@@ -174,15 +174,19 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
                     Ok(LLSDValue::String(s))     // not sure about this
                 }                 
                 '1' => {
+                    consume_char(cursor, '1')?;
                     consume_char(cursor, '6')?;          // base 16
                     consume_char(cursor, '"')?;          // begin quote
                     let s = parse_quoted_string(cursor,'"')?;
                     Ok(LLSDValue::Binary(hex::decode(s)?))
                 }
                 '6' => {
+                    consume_char(cursor, '6')?;
                     consume_char(cursor, '4')?;
                     consume_char(cursor, '"')?;          // begin quote
-                    let s = parse_quoted_string(cursor,'"')?;
+                    let mut s = parse_quoted_string(cursor,'"')?;
+                    s.retain(|c| !c.is_whitespace());
+                    println!("Base 64 decode input: \"{}\"", s);    // ***TEMP***
                     let bytes = base64::engine::general_purpose::STANDARD.decode(s)?;
                     Ok(LLSDValue::Binary(bytes))
                 }
