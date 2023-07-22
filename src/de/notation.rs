@@ -117,6 +117,36 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         Ok(s)
     }
     
+    /// Parse date string
+    fn parse_date(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+        todo!()
+    }
+    
+    /// Parse URI string per rfc 1738
+    fn parse_uri(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+        if let Some(delim) = cursor.next() {
+            if delim == '"' {
+                let s = parse_quoted_string(cursor, delim)?;
+                Ok(LLSDValue::URI(urlencoding::decode(&s)?.to_string()))
+            } else {
+                Err(anyhow!("URI did not begin with '\"'"))
+            }
+        } else {
+            Err(anyhow!("URI at end of file."))
+        }
+    }
+    
+    /// Parse UUID
+    fn parse_uuid(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+        todo!()
+    }
+    
+    /// Parse binary value
+    fn parse_binary(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+        todo!()
+    }
+
+    
     /// Parse "{ 'key' : value, 'key' : value ... }
     fn parse_map(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         let mut kvmap = HashMap::new();                         // building map
@@ -203,6 +233,10 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
             '[' => { parse_array(cursor) }              // array
             'i' => { parse_integer(cursor) }            // integer
             'r' => { parse_real(cursor) }               // real
+            'd' => { parse_date(cursor) }               // date
+            'u' => { parse_uuid(cursor) }               // UUID
+            'l' => { parse_uri(cursor) }                // URI
+            'b' => { parse_binary(cursor) }             // binary
             '"' => { Ok(LLSDValue::String(parse_quoted_string(cursor, ch)?)) }  // string, double quoted
             '\'' => { Ok(LLSDValue::String(parse_quoted_string(cursor, ch)?)) }  // string, double quoted
             //  ***MORE*** add cases for UUID, URL, date, and binary.
