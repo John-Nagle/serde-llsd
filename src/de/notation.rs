@@ -150,12 +150,8 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     
     /// Parse UUID. No quotes
     fn parse_uuid(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
-        const UUID_LEN: usize = "c69b29b1-8944-58ae-a7c5-2ca7b23e22fb".len();
-        let mut s = String::with_capacity(UUID_LEN);
-        //  next_chunk, for getting N chars, doesn't work yet.
-        for _ in 0..UUID_LEN {
-            s.push(cursor.next().ok_or(anyhow!("EOF parsing UUID"))?);
-        }
+        const UUID_LEN: usize = "c69b29b1-8944-58ae-a7c5-2ca7b23e22fb".len();   // just to get the length of a standard format UUID.
+        let s = next_chunk(cursor, UUID_LEN)?;   // read fixed length
         Ok(LLSDValue::UUID(Uuid::parse_str(&s)?))
     }
     
@@ -164,8 +160,18 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     fn parse_binary(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         todo!()
     }
-
     
+    /// Read chunk of N characters.
+    //  This is a built-in feature of Chars in Nightly, but it hasn't shipped in stable Rust yet.
+    fn next_chunk(cursor: &mut Peekable<Chars>, cnt: usize) -> Result<String, Error> {
+        let mut s = String::with_capacity(cnt);
+        //  next_chunk, for getting N chars, doesn't work yet.
+        for _ in 0..cnt {
+            s.push(cursor.next().ok_or(anyhow!("EOF parsing UUID"))?);
+        }
+        Ok(s)
+    }
+
     /// Parse "{ 'key' : value, 'key' : value ... }
     fn parse_map(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         let mut kvmap = HashMap::new();                         // building map
@@ -264,111 +270,6 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         Err(anyhow!("Premature end of string in parse"))  // error
     }
 }
-/*
-    //  These could be generic if generics with numeric parameters were in stable Rust.
-    fn read_u8(cursor: &mut dyn Read) -> Result<u8, Error> {
-        let mut b: [u8; 1] = [0; 1];
-        cursor.read_exact(&mut b)?; // read one byte
-        Ok(b[0])
-    }
-    fn read_u32(cursor: &mut dyn Read) -> Result<u32, Error> {
-        let mut b: [u8; 4] = [0; 4];
-        cursor.read_exact(&mut b)?; // read one byte
-        Ok(u32::from_be_bytes(b))
-    }
-    fn read_i32(cursor: &mut dyn Read) -> Result<i32, Error> {
-        let mut b: [u8; 4] = [0; 4];
-        cursor.read_exact(&mut b)?; // read one byte
-        Ok(i32::from_be_bytes(b))
-    }
-    fn read_i64(cursor: &mut dyn Read) -> Result<i64, Error> {
-        let mut b: [u8; 8] = [0; 8];
-        cursor.read_exact(&mut b)?; // read one byte
-        Ok(i64::from_be_bytes(b))
-    }
-    fn read_f64(cursor: &mut dyn Read) -> Result<f64, Error> {
-        let mut b: [u8; 8] = [0; 8];
-        cursor.read_exact(&mut b)?; // read one byte
-        Ok(f64::from_be_bytes(b))
-    }
-    fn read_variable(cursor: &mut dyn Read) -> Result<Vec<u8>, Error> {
-        let length = read_u32(cursor)?; // read length in bytes
-        let mut buf = vec![0u8; length as usize];
-        cursor.read_exact(&mut buf)?;
-        Ok(buf) // read bytes of string
-    }
-
-    let typecode = read_u8(cursor)?;
-    match typecode {
-        //  Undefined - the empty value
-        b'!' => Ok(LLSDValue::Undefined),
-        //  Boolean - 1 or 0
-        b'0' => Ok(LLSDValue::Boolean(false)),
-        b'1' => Ok(LLSDValue::Boolean(true)),
-        //  String - length followed by data
-        b's' => Ok(LLSDValue::String(
-            std::str::from_utf8(&read_variable(cursor)?)?.to_string(),
-        )),
-        //  URI - length followed by data
-        b'l' => Ok(LLSDValue::URI(
-            std::str::from_utf8(&read_variable(cursor)?)?.to_string(),
-        )),
-        //  Integer - 4 bytes
-        b'i' => Ok(LLSDValue::Integer(read_i32(cursor)?)),
-        //  Real - 4 bytes
-        b'r' => Ok(LLSDValue::Real(read_f64(cursor)?)),
-        //  UUID - 16 bytes
-        b'u' => {
-            let mut buf: [u8; 16] = [0u8; 16];
-            cursor.read_exact(&mut buf)?; // read bytes of string
-            Ok(LLSDValue::UUID(uuid::Uuid::from_bytes(buf)))
-        }
-        //  Binary - length followed by data
-        b'b' => Ok(LLSDValue::Binary(read_variable(cursor)?)),
-        //  Date - 64 bits
-        b'd' => Ok(LLSDValue::Date(read_i64(cursor)?)),
-        //  Map -- keyed collection of items
-        b'{' => {
-            let mut dict: HashMap<String, LLSDValue> = HashMap::new(); // accumulate hash here
-            let count = read_u32(cursor)?; // number of items
-            for _ in 0..count {
-                let keyprefix = &read_u8(cursor)?; // key should begin with b'k';
-                match keyprefix {
-                    b'k' => {
-                        let key = std::str::from_utf8(&read_variable(cursor)?)?.to_string();
-                        let _ = dict.insert(key, parse_value(cursor)?); // recurse and add, allowing dups
-                    }
-                    _ => {
-                        return Err(anyhow!(
-                            "Binary LLSD map key had {:?} instead of expected 'k'",
-                            keyprefix
-                        ))
-                    }
-                }
-            }
-            if read_u8(cursor)? != b'}' {
-                return Err(anyhow!("Binary LLSD map did not end properly with }}"));
-            }
-            Ok(LLSDValue::Map(dict))
-        }
-        //  Array -- array of items
-        b'[' => {
-            let mut array: Vec<LLSDValue> = Vec::new(); // accumulate hash here
-            let count = read_u32(cursor)?; // number of items
-            for _ in 0..count {
-                array.push(parse_value(cursor)?); // recurse and add, allowing dups
-            }
-            if read_u8(cursor)? != b']' {
-                return Err(anyhow!("Binary LLSD array did not end properly with ] "));
-            }
-            Ok(LLSDValue::Array(array))
-        }
-
-        _ => Err(anyhow!("Binary LLSD, unexpected type code {:?}", typecode)),
-    }
-}
-*/
-
 
 #[test]
 fn notationparsetest1() {
@@ -398,6 +299,7 @@ fn notationparsetest1() {
 
 #[test]
 fn notationparsetest2() {
+    //  Linden Lab documented test data from wiki. Compatibility test use only.
     const TESTNOTATION2: &str = r#"
 [
   {'destination':l"http://secondlife.com"}, 
