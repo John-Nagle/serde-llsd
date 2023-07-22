@@ -163,6 +163,11 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     /// Not sure about that last form. Input to this is UTF-8.
     /// Putting text in this format is just wrong, yet the LL example does it.
     /// This conversion may fail for non-UTF8 input.
+    //
+    //  The LL parser for this is at
+    //  https://github.com/secondlife/viewer/blob/ec4135da63a3f3877222fba4ecb59b15650371fe/indra/llcommon/llsdserialize.cpp#L789
+    //  That reads N bytes from the input as a byte stream. But we're working with UTF-8. This is a problem.
+    //
     fn parse_binary(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         if let Some(ch) = cursor.peek() {
             match ch {
@@ -177,7 +182,8 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
                     consume_char(cursor, '1')?;
                     consume_char(cursor, '6')?;          // base 16
                     consume_char(cursor, '"')?;          // begin quote
-                    let s = parse_quoted_string(cursor,'"')?;
+                    let mut s = parse_quoted_string(cursor,'"')?;
+                    s.retain(|c| !c.is_whitespace());
                     Ok(LLSDValue::Binary(hex::decode(s)?))
                 }
                 '6' => {
