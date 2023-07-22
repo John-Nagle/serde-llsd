@@ -94,6 +94,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     
     /// Parse string. "ABC" or 'ABC', with '\' as escape.
     /// Does not currently parse the numeric count prefix form.
+    /// Unclear what a "raw string" means here. We are utf-8 and SL is - what, utf-16?
     fn parse_quoted_string(cursor: &mut Peekable<Chars>, delim: char) -> Result<String, Error> {
         consume_whitespace(cursor);
         let mut s = String::with_capacity(128);           // allocate reasonably large size
@@ -119,7 +120,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         Ok(s)
     }
     
-    /// Parse date string
+    /// Parse date string per RFC 1339.
     fn parse_date(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         if let Some(delim) = cursor.next() {
             if delim == '"' || delim == '\'' {
@@ -159,6 +160,30 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     /// Format is b16"value" or b64"value"
     fn parse_binary(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         todo!()
+    }
+    
+    /// Parse sized string.
+    /// Format is s(NNN)"string"
+    fn parse_sized_string(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+        let cnt = parse_number_in_parentheses(cursor)?;
+        println!("String size is {}", cnt);
+        //  At this point, we are supposed to have a quoted string with no escape chararacters. I think.
+        //  This may have problems with non-UTF8 encoding.
+        consume_char(cursor, '"')?;
+        let s = next_chunk(cursor, cnt)?;
+        consume_char(cursor, '"')?;
+        Ok(LLSDValue::String(s))
+    }
+    
+    fn parse_number_in_parentheses(cursor: &mut Peekable<Chars>) -> Result<usize, Error> {
+        consume_char(cursor, '(')?;
+        let val = parse_integer(cursor)?;
+        consume_char(cursor, ')')?;   
+        if let LLSDValue::Integer(v) = val {
+            Ok(v as usize)
+        } else {
+            panic!("Integer parse did not return an integer.");
+        }
     }
     
     /// Read chunk of N characters.
@@ -261,6 +286,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
             'u' => { parse_uuid(cursor) }               // UUID
             'l' => { parse_uri(cursor) }                // URI
             'b' => { parse_binary(cursor) }             // binary
+            's' => { parse_sized_string(cursor) }       // string with explicit size
             '"' => { Ok(LLSDValue::String(parse_quoted_string(cursor, ch)?)) }  // string, double quoted
             '\'' => { Ok(LLSDValue::String(parse_quoted_string(cursor, ch)?)) }  // string, double quoted
             //  ***MORE*** add cases for UUID, URL, date, and binary.
@@ -331,4 +357,39 @@ fn notationparsetest2() {
 "#;
     let parsed2 =  from_str(TESTNOTATION2).unwrap();
     println!("Parse of {}: \n{:#?}", TESTNOTATION2, parsed2);
+}
+
+#[test]
+fn notationparsetest3() {
+    //  Linden Lab documented test data from wiki. Compatibility test use only.
+    const TESTNOTATION3: &str = r#"
+[
+  {
+    'creation-date':d"2007-03-15T18:30:18Z", 
+    'creator-id':u3c115e51-04f4-523c-9fa6-98aff1034730
+  },
+  s(10)"0123456789",
+  "Where's the beef?",
+  'Over here.',  
+  b(158)"default
+{
+    state_entry()
+    {
+        llSay(0, "Hello, Avatar!");
+    }
+
+    touch_start(integer total_number)
+    {
+        llSay(0, "Touched.");
+    }
+}",
+  b64"AABAAAAAAAAAAAIAAAA//wAAP/8AAADgAAAA5wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AABkAAAAZAAAAAAAAAAAAAAAZAAAAAAAAAABAAAAAAAAAAAAAAAAAAAABQAAAAEAAAAQAAAAAAAA
+AAUAAAAFAAAAABAAAAAAAAAAPgAAAAQAAAAFAGNbXgAAAABgSGVsbG8sIEF2YXRhciEAZgAAAABc
+XgAAAAhwEQjRABeVAAAABQBjW14AAAAAYFRvdWNoZWQuAGYAAAAAXF4AAAAIcBEI0QAXAZUAAEAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" 
+]
+"#;
+    let parsed3 =  from_str(TESTNOTATION3).unwrap();
+    println!("Parse of {}: \n{:#?}", TESTNOTATION3, parsed3);
 }
