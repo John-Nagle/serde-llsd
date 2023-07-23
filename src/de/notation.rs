@@ -29,6 +29,9 @@ pub const LLSDNOTATIONPREFIX: &[u8] = b"<? llsd/notation ?>\n";
 /// Sentinel, must match exactly.
 pub const LLSDNOTATIONSENTINEL: &[u8] = LLSDNOTATIONPREFIX; 
 
+type InputType<'a> = Peekable<Chars<'a>>;
+type AccumulateType = String;
+
 ///    Parse LLSD string expressed in notation format into an LLSDObject tree. No header.
 pub fn from_str(notation_str: &str) -> Result<LLSDValue, Error> {
     let mut cursor = notation_str.chars().peekable();
@@ -42,10 +45,10 @@ pub fn from_reader(cursor: &mut dyn Read) -> Result<LLSDValue, Error> {
 */
 
 /// Parse one value - real, integer, map, etc. Recursive.
-fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+fn parse_value(cursor: &mut InputType) -> Result<LLSDValue, Error> {
     /// Parse "iNNN"
-    fn parse_integer(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
-        let mut s = String::with_capacity(20);  // pre-allocate; can still grow
+    fn parse_integer(cursor: &mut InputType) -> Result<LLSDValue, Error> {
+        let mut s = AccumulateType::with_capacity(20);  // pre-allocate; can still grow
         //  Accumulate numeric chars.
         while let Some(ch) = cursor.peek() {
             match ch {
@@ -59,8 +62,8 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     
     /// Parse "rNNN".
     //  Does "notation" allow exponents?
-    fn parse_real(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
-        let mut s = String::with_capacity(20);  // pre-allocate; can still grow
+    fn parse_real(cursor: &mut InputType) -> Result<LLSDValue, Error> {
+        let mut s = AccumulateType::with_capacity(20);  // pre-allocate; can still grow
         //  Accumulate numeric chars.
         while let Some(ch) = cursor.peek() {
             match ch {
@@ -73,9 +76,9 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
     
     /// Parse Boolean
-    fn parse_boolean(cursor: &mut Peekable<Chars>, first_char: char) -> Result<LLSDValue, Error> {
+    fn parse_boolean(cursor: &mut InputType, first_char: char) -> Result<LLSDValue, Error> {
         //  Accumulate next word
-        let mut s = String::with_capacity(4);
+        let mut s = AccumulateType::with_capacity(4);
         s.push(first_char);     // we already had the first character.        
         loop {              
             if let Some(ch) = cursor.peek() {
@@ -97,9 +100,9 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     /// Parse string. "ABC" or 'ABC', with '\' as escape.
     /// Does not currently parse the numeric count prefix form.
     /// Unclear what a "raw string" means here. We are utf-8 and SL is - what, utf-16?
-    fn parse_quoted_string(cursor: &mut Peekable<Chars>, delim: char) -> Result<String, Error> {
+    fn parse_quoted_string(cursor: &mut InputType, delim: char) -> Result<String, Error> {
         consume_whitespace(cursor);
-        let mut s = String::with_capacity(128);           // allocate reasonably large size
+        let mut s = AccumulateType::with_capacity(128);           // allocate reasonably large size
         loop {
             let ch_opt = cursor.next();
             if let Some(ch) = ch_opt { 
@@ -123,7 +126,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
     
     /// Parse date string per RFC 1339.
-    fn parse_date(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+    fn parse_date(cursor: &mut InputType) -> Result<LLSDValue, Error> {
         if let Some(delim) = cursor.next() {
             if delim == '"' || delim == '\'' {
                 let s = parse_quoted_string(cursor, delim)?;
@@ -138,7 +141,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
     
     /// Parse URI string per rfc 1738
-    fn parse_uri(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+    fn parse_uri(cursor: &mut InputType) -> Result<LLSDValue, Error> {
         if let Some(delim) = cursor.next() {
             if delim == '"' || delim == '\'' {
                 let s = parse_quoted_string(cursor, delim)?;
@@ -152,7 +155,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
     
     /// Parse UUID. No quotes
-    fn parse_uuid(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+    fn parse_uuid(cursor: &mut InputType) -> Result<LLSDValue, Error> {
         const UUID_LEN: usize = "c69b29b1-8944-58ae-a7c5-2ca7b23e22fb".len();   // just to get the length of a standard format UUID.
         let s = next_chunk(cursor, UUID_LEN)?;   // read fixed length
         Ok(LLSDValue::UUID(Uuid::parse_str(&s)?))
@@ -168,7 +171,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     //  https://github.com/secondlife/viewer/blob/ec4135da63a3f3877222fba4ecb59b15650371fe/indra/llcommon/llsdserialize.cpp#L789
     //  That reads N bytes from the input as a byte stream. But we're working with UTF-8. This is a problem.
     //
-    fn parse_binary(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+    fn parse_binary(cursor: &mut InputType) -> Result<LLSDValue, Error> {
         if let Some(ch) = cursor.peek() {
             match ch {
                 '(' => {
@@ -205,7 +208,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     
     /// Parse sized string.
     /// Format is s(NNN)"string"
-    fn parse_sized_string(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+    fn parse_sized_string(cursor: &mut InputType) -> Result<LLSDValue, Error> {
         let cnt = parse_number_in_parentheses(cursor)?;
         println!("String size is {}", cnt);
         //  At this point, we are supposed to have a quoted string with no escape chararacters. I think.
@@ -216,7 +219,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
         Ok(LLSDValue::String(s))
     }
     
-    fn parse_number_in_parentheses(cursor: &mut Peekable<Chars>) -> Result<usize, Error> {
+    fn parse_number_in_parentheses(cursor: &mut InputType) -> Result<usize, Error> {
         consume_char(cursor, '(')?;
         let val = parse_integer(cursor)?;
         consume_char(cursor, ')')?;   
@@ -229,8 +232,8 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     
     /// Read chunk of N characters.
     //  This is a built-in feature of Chars in Nightly, but it hasn't shipped in stable Rust yet.
-    fn next_chunk(cursor: &mut Peekable<Chars>, cnt: usize) -> Result<String, Error> {
-        let mut s = String::with_capacity(cnt);
+    fn next_chunk(cursor: &mut InputType, cnt: usize) -> Result<String, Error> {
+        let mut s = AccumulateType::with_capacity(cnt);
         //  next_chunk, for getting N chars, doesn't work yet.
         for _ in 0..cnt {
             s.push(cursor.next().ok_or(anyhow!("EOF parsing UUID"))?);
@@ -239,7 +242,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
 
     /// Parse "{ 'key' : value, 'key' : value ... }
-    fn parse_map(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+    fn parse_map(cursor: &mut InputType) -> Result<LLSDValue, Error> {
         let mut kvmap = HashMap::new();                         // building map
         loop {
             consume_whitespace(cursor);
@@ -267,7 +270,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     /// Parse "[ value, value ... ]"
     /// At this point, the '[' has been consumed.
     /// At successful return, the ending ']' has been consumed.
-    fn parse_array(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
+    fn parse_array(cursor: &mut InputType) -> Result<LLSDValue, Error> {
         let mut array_items = Vec::new();
         //  Accumulate array elements.
         loop {
@@ -287,7 +290,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
     
     /// Consume whitespace. Next char will be non-whitespace.
-    fn consume_whitespace(cursor: &mut Peekable<Chars>) {
+    fn consume_whitespace(cursor: &mut InputType) {
         while let Some(ch) = cursor.peek() {
             match ch {
                 ' ' | '\n' => { let _ = cursor.next(); },                 // ignore leading white space
@@ -297,7 +300,7 @@ fn parse_value(cursor: &mut Peekable<Chars>) -> Result<LLSDValue, Error> {
     }
     
     /// Consume expected non-whitespace char
-    fn consume_char(cursor: &mut Peekable<Chars>, expected_ch: char) -> Result<(), Error> {
+    fn consume_char(cursor: &mut InputType, expected_ch: char) -> Result<(), Error> {
         consume_whitespace(cursor);
         if let Some(ch) = cursor.next() {
             if ch != expected_ch {
