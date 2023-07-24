@@ -246,6 +246,11 @@ trait LLSDStream<C, S> {
         Ok(LLSDValue::Array(array_items))               // return array
     }
     
+    fn parse_binary(&mut self) -> Result<LLSDValue, Error>; // passed down to next level
+    
+    fn parse_sized_string(&mut self) -> Result<LLSDValue, Error>; // passed down to next level
+        
+    
     /// Parse one value - real, integer, map, etc. Recursive.
     /// This is the top level of the parser
     fn parse_value(&mut self) -> Result<LLSDValue, Error> {
@@ -264,8 +269,8 @@ trait LLSDStream<C, S> {
             'd' => { self.parse_date() }                // date
             'u' => { self.parse_uuid() }                // UUID
             'l' => { self.parse_uri() }                 // URI
-            ////'b' => { parse_binary(cursor) }             // binary
-            ////'s' => { parse_sized_string(cursor) }       // string with explicit size
+            'b' => { self.parse_binary() }              // binary
+            's' => { self.parse_sized_string() }        // string with explicit size
             '"' => { Ok(LLSDValue::String(self.parse_quoted_string(ch)?)) }  // string, double quoted
             '\'' => { Ok(LLSDValue::String(self.parse_quoted_string(ch)?)) }  // string, double quoted
             //  ***MORE*** add cases for UUID, URL, date, and binary.
@@ -292,13 +297,23 @@ impl LLSDStream<char, Peekable<Chars<'_>>> for LLSDStreamChars<'_> {
     /// Into char, which is a null conversion
     fn into_char(ch: &char) -> char {
         *ch
-    }   
+    }  
+    
+    /// Won't work.
+    fn parse_binary(&mut self) -> Result<LLSDValue, Error> {
+        Err(anyhow!("Byte-counted binary data inside UTF-8 won't work."))
+    }
+    
+    /// Won't work.
+    fn parse_sized_string(&mut self) -> Result<LLSDValue, Error> {
+        Err(anyhow!("Byte-counted string data inside UTF-8 won't work."))
+    }
 }
 
 impl LLSDStreamChars<'_> {
     /// Parse LLSD string expressed in notation format into an LLSDObject tree. No header.
     /// Strng form
-    fn parse(notation_str: &str) -> Result<LLSDValue, Error> {
+    pub fn parse(notation_str: &str) -> Result<LLSDValue, Error> {
         let mut stream = LLSDStreamChars { cursor: notation_str.chars().peekable() };
         stream.parse_value()
     }
@@ -322,16 +337,109 @@ impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
     /// Into char, which is a real conversion to a UTF-8 char.
     fn into_char(ch: &u8) -> char {
         (*ch).into()
-    }    
+    }
+    
+    /// Parse binary value.
+    /// Format is b16"value" or b64"value" or b(cnt)"value".
+    /// Not sure about that last form. Input to this is UTF-8.
+    /// Putting text in this format is just wrong, yet the LL example does it.
+    /// This conversion may fail for non-UTF8 input.
+    //
+    //  The LL parser for this is at
+    //  https://github.com/secondlife/viewer/blob/ec4135da63a3f3877222fba4ecb59b15650371fe/indra/llcommon/llsdserialize.cpp#L789
+    //  That reads N bytes from the input as a byte stream. But we're working with UTF-8. This is a problem.
+    //
+    fn parse_binary(&mut self) -> Result<LLSDValue, Error> {
+        if let Some(ch) = self.peek() {
+            match Self::into_char(ch) {
+                '(' => {
+                    let cnt = self.parse_number_in_parentheses()?;
+                    self.consume_char('"')?;
+                    let s = self.next_chunk(cnt)?;
+                    self.consume_char('"')?;  // count must be correct or this will fail.
+                    Ok(LLSDValue::String(s))     // not sure about this
+                }                 
+                '1' => {
+                    self.consume_char('1')?;
+                    self.consume_char('6')?;          // base 16
+                    self.consume_char('"')?;          // begin quote
+                    let mut s = self.parse_quoted_string('"')?;
+                    s.retain(|c| !c.is_whitespace());
+                    Ok(LLSDValue::Binary(hex::decode(s)?))
+                }
+                '6' => {
+                    self.consume_char('6')?;
+                    self.consume_char('4')?;
+                    self.consume_char('"')?;          // begin quote
+                    let mut s = self.parse_quoted_string('"')?;
+                    s.retain(|c| !c.is_whitespace());
+                    println!("Base 64 decode input: \"{}\"", s);    // ***TEMP***
+                    let bytes = base64::engine::general_purpose::STANDARD.decode(s)?;
+                    Ok(LLSDValue::Binary(bytes))
+                }
+                _ => Err(anyhow!("Binary value started with {} instead of (, 1, or 6", ch))   
+            } 
+        } else {
+            Err(anyhow!("Binary value started with EOF"))   
+        }
+    }
+    
+    /// Parse sized string.
+    /// Format is s(NNN)"string"
+    fn parse_sized_string(&mut self) -> Result<LLSDValue, Error> {
+        let cnt = self.parse_number_in_parentheses()?;
+        println!("String size is {}", cnt);
+        //  At this point, we are supposed to have a quoted string with no escape chararacters. I think.
+        //  This may have problems with non-UTF8 encoding.
+        self.consume_char('"')?;
+        let s = self.next_chunk(cnt)?;
+        self.consume_char('"')?;
+        Ok(LLSDValue::String(s))
+    }
 }
 
 impl LLSDStreamBytes<'_> {
     /// Parse LLSD string expressed in notation format into an LLSDObject tree. No header.
     /// Bytes form.
-    fn parse(notation_bytes: &[u8]) -> Result<LLSDValue, Error> {
+    pub fn parse(notation_bytes: &[u8]) -> Result<LLSDValue, Error> {
         let mut stream = LLSDStreamBytes { cursor: notation_bytes.iter().peekable() };
         stream.parse_value()
     }
+    
+    /// Parse sized string.
+    /// Format is s(NNN)"string"
+    fn parse_sized_string(&mut self) -> Result<LLSDValue, Error> {
+        let cnt = self.parse_number_in_parentheses()?;
+        println!("String size is {}", cnt);
+        //  At this point, we are supposed to have a quoted string with no escape chararacters. I think.
+        //  This may have problems with non-UTF8 encoding.
+        self.consume_char('"')?;
+        let s = self.next_chunk(cnt)?;
+        self.consume_char('"')?;
+        Ok(LLSDValue::String(s))
+    }
+    
+    fn parse_number_in_parentheses(&mut self) -> Result<usize, Error> {
+        self.consume_char('(')?;
+        let val = self.parse_integer()?;
+        self.consume_char(')')?;   
+        if let LLSDValue::Integer(v) = val {
+            Ok(v as usize)
+        } else {
+            panic!("Integer parse did not return an integer.");
+        }
+    }
+    
+    /// Read chunk of N characters.
+    fn next_chunk(&mut self, cnt: usize) -> Result<String, Error> {
+        let mut s = String::with_capacity(cnt);
+        //  next_chunk, for getting N chars, doesn't work yet.
+        for _ in 0..cnt {
+            s.push(Self::into_char(&self.next_ok()?));
+        }
+        Ok(s)
+    }
+
 }
 
 #[test]
@@ -383,6 +491,41 @@ fn notationparse2() {
     let parsed_b = LLSDStreamBytes::parse(TESTNOTATION2.as_bytes());
     println!("Parse of byte form: {:#?}", parsed_b);
     assert_eq!(parsed_s.unwrap(), parsed_b.unwrap());
+}
+
+#[test]
+fn notationparse3() {
+    //  Linden Lab documented test data from wiki. Compatibility test use only.
+    const TESTNOTATION3: &str = r#"
+[
+  {
+    'creation-date':d"2007-03-15T18:30:18Z", 
+    'creator-id':u3c115e51-04f4-523c-9fa6-98aff1034730
+  },
+  s(10)"0123456789",
+  "Where's the beef?",
+  'Over here.',  
+  b(158)"default
+{
+    state_entry()
+    {
+        llSay(0, "Hello, Avatar!");
+    }
+
+    touch_start(integer total_number)
+    {
+        llSay(0, "Touched.");
+    }
+}",
+  b64"AABAAAAAAAAAAAIAAAA//wAAP/8AAADgAAAA5wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AABkAAAAZAAAAAAAAAAAAAAAZAAAAAAAAAABAAAAAAAAAAAAAAAAAAAABQAAAAEAAAAQAAAAAAAA
+AAUAAAAFAAAAABAAAAAAAAAAPgAAAAQAAAAFAGNbXgAAAABgSGVsbG8sIEF2YXRhciEAZgAAAABc
+XgAAAAhwEQjRABeVAAAABQBjW14AAAAAYFRvdWNoZWQuAGYAAAAAXF4AAAAIcBEI0QAXAZUAAEAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" 
+]
+"#;
+    let parsed_b = LLSDStreamBytes::parse(TESTNOTATION3.as_bytes());
+    println!("Parse of byte form: {:#?}", parsed_b);
 }
 
 // ==================
