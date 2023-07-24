@@ -7,9 +7,18 @@
 //!
 //!  Notation format.
 //!  Similar to JSON, but not compatible
+//!
+//! Notation format comes in two forms - bytes, and UTF-8 characters.
+//! UTF-8 format is always valid UTF-8 strings, and can be encapsulated
+//! inside XML if desired. This format is used inside SL/OS for "gltf material overrides".
+//!
+//! Byte string form is binary bytes, and cannot be encapsulated inside XML.
+//! It can contain raw binary fields of the form b(NN)"rawbytes".
+//! and raw strings of the form s(NN)"rawstring".
+//! This form is used inside SL/OS for script uploads. We think.
 //
 //  Animats
-//  March, 2021.
+//  June, 2023.
 //  License: LGPL.
 //
 use crate::LLSDValue;
