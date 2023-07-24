@@ -16,7 +16,7 @@ use crate::LLSDValue;
 use anyhow::{anyhow, Error};
 use std::collections::HashMap;
 use core::iter::{Peekable};
-use core::str::Chars;
+use core::str::{Chars, Bytes};
 use uuid::{Uuid};
 use chrono::DateTime;
 use base64::Engine;
@@ -32,24 +32,42 @@ pub const LLSDNOTATIONSENTINEL: &[u8] = LLSDNOTATIONPREFIX;
 // ==================
 /// An LLSD stream. May be either a UTF-8 stream or a byte stream
 trait LLSDStream<C, S> {
-    /// Get next char
+    /// Get next char/byte
     fn next(&mut self) -> Option<C>;
-    /// Peek at next char char
+    /// Peek at next char/byte
     fn peek(&mut self) -> Option<&C>;
 }
 
+/// Stream, composed of UTF-8 chars.
 struct LLSDStreamChars<'a> {
-    /// Stream is composed of peekable chars
+    /// Stream is composed of peekable UTF-8 chars
     stream: Peekable<Chars<'a>>,
 }
 
 impl LLSDStream<char, Peekable<Chars<'_>>> for LLSDStreamChars<'_> {
-
+    /// Get next UTF-8 char.
     fn next(&mut self) -> Option<char> {
         self.stream.next()
     }
-    
+    /// Peek at next UTF-8 char.
     fn peek(&mut self) -> Option<&char> {
+        self.stream.peek()
+    }
+}
+
+/// Stream, composed of raw bytes.
+struct LLSDStreamBytes<'a> {
+    /// Stream is composed of peekable bytes.
+    stream: Peekable<Bytes<'a>>,
+}
+
+impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
+    /// Get next UTF-8 byte.
+    fn next(&mut self) -> Option<u8> {
+        self.stream.next()
+    }
+    /// Peek at next UTF-8 byte.
+    fn peek(&mut self) -> Option<&u8> {
         self.stream.peek()
     }
 }
