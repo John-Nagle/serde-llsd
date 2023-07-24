@@ -54,6 +54,14 @@ trait LLSDStream<C, S> {
     }
     /// Peek at next char/byte
     fn peek(&mut self) -> Option<&C>;
+    //  Peek at next char, as result
+    fn peek_ok(&mut self) -> Result<&C, Error> {
+        if let Some(ch) = self.peek() {
+            Ok(ch)
+        } else {
+            Err(anyhow!("Unexpected end of input parsing Notation"))
+        }           
+    }
     /// Convert into char
     fn into_char(ch: &C) -> char;
     /// Consume whitespace. Next char will be non-whitespace.
@@ -190,6 +198,59 @@ trait LLSDStream<C, S> {
         Ok(LLSDValue::UUID(Uuid::parse_str(&s)?))
     }
 
+    /// Parse "{ 'key' : value, 'key' : value ... }
+    fn parse_map(&mut self) -> Result<LLSDValue, Error> {
+        let mut kvmap = HashMap::new();                         // building map
+        loop {
+            self.consume_whitespace();
+            let key =  {
+                let ch = Self::into_char(&self.next_ok()?);
+                match ch {
+                    '}' => { let _ = self.next(); break } // end of map, may be empty.
+                    '\'' | '"' => self.parse_quoted_string(ch)?, 
+                    _ => { return Err(anyhow!("Map key began with {} instead of quote.", ch)); }
+                }
+            };
+            self.consume_char(':')?;
+            let value = self.parse_value()?;           // value of key:value
+            kvmap.insert(key, value);
+            //  Check for comma indicating more items.
+            self.consume_whitespace();
+            if Self::into_char(self.peek_ok()?) == ',' {
+                let _ = self.next();    // consume comma, continue with next field
+            }
+        }
+        Ok(LLSDValue::Map(kvmap))
+    }
+        
+    /// Parse "[ value, value ... ]"
+    /// At this point, the '[' has been consumed.
+    /// At successful return, the ending ']' has been consumed.
+    fn parse_array(&mut self) -> Result<LLSDValue, Error> {
+        let mut array_items = Vec::new();
+        //  Accumulate array elements.
+        loop {
+            //  Check for end of items
+            self.consume_whitespace();
+            let ch = Self::into_char(self.peek_ok()?);
+            if ch == ']' {
+                let _ = self.next(); break;    // end of array, may be empty.
+            }
+            array_items.push(self.parse_value()?);          // parse next value
+            //  Check for comma indicating more items.
+            self.consume_whitespace();
+            if Self::into_char(self.peek_ok()?) == ',' {
+                let _ = self.next();    // consume comma, continue with next field
+            }           
+        }
+        Ok(LLSDValue::Array(array_items))               // return array
+    }
+    
+    /// Parse one value - real, integer, map, etc. Recursive.
+    /// This is the top level of the parser
+    fn parse_value(&mut self) -> Result<LLSDValue, Error> {
+        todo!()
+    }
 }
 
 /// Stream, composed of UTF-8 chars.
@@ -241,8 +302,7 @@ impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
     /// Into char, which is a null conversion
     fn into_char(ch: &u8) -> char {
         (*ch).into()
-    }   
-    
+    }    
 }
 
 #[test]
