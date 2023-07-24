@@ -24,6 +24,8 @@ pub use crate::{
         binary::from_reader as binary_from_reader, // Name clash
         xml::from_reader,
         xml::from_str,
+        notation::from_bytes as notation_from_bytes,
+        notation::from_str as notation_from_str,
     },
     ser::{
         binary::to_bytes,

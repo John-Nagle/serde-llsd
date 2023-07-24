@@ -8,12 +8,20 @@ use anyhow::{anyhow, Error};
 /// Parse LLSD, detecting format.
 /// Recognizes binary and XML LLSD, with or without sentinel.
 pub fn from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
-    //  Try binary first
+    //  Try sentinels first.
+    //  Binary sentinel
     if msg.len() >= binary::LLSDBINARYSENTINEL.len()
         && &msg[0..binary::LLSDBINARYSENTINEL.len()] == binary::LLSDBINARYSENTINEL
     {
         return binary::from_bytes(&msg[binary::LLSDBINARYSENTINEL.len()..]);
     }
+    //  Try Notation sentinel
+    if msg.len() >= notation::LLSDNOTATIONSENTINEL.len()
+        && &msg[0..notation::LLSDNOTATIONSENTINEL.len()] == notation::LLSDNOTATIONSENTINEL
+    {
+        return notation::from_bytes(&msg[notation::LLSDNOTATIONSENTINEL.len()..]);
+    }
+    
     //  Check for binary without header. If array or map marker, parse.
     if msg.len() > 1 {
         match msg[0] {
@@ -22,12 +30,15 @@ pub fn from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
             _ => {}
         }
     }
-    //  No binary sentinel, try text format.
+    
+    //  Try XML sentinel.
     let msgstring = std::str::from_utf8(msg)?; // convert to UTF-8 string
     if msgstring.trim_start().starts_with(xml::LLSDXMLSENTINEL) {
         // try XML
         return xml::from_str(msgstring);
     }
+
+
     //  "Notation" syntax is not currently supported.
     //  Trim string to N chars for error msg.
     let snippet = msgstring

@@ -36,9 +36,18 @@ use base64::Engine;
 /// Notation LLSD prefix
 pub const LLSDNOTATIONPREFIX: &[u8] = b"<? llsd/notation ?>\n"; 
 /// Sentinel, must match exactly.
-pub const LLSDNOTATIONSENTINEL: &[u8] = LLSDNOTATIONPREFIX; 
+pub const LLSDNOTATIONSENTINEL: &[u8] = LLSDNOTATIONPREFIX;
 
-// ==================
+/// Exported parse from bytes.
+pub fn from_bytes(b: &[u8]) -> Result<LLSDValue, Error> {
+    LLSDStreamBytes::parse(b)
+}
+
+/// Exported parse from str.
+pub fn from_str(s: &str) -> Result<LLSDValue, Error> {
+    LLSDStreamChars::parse(s)
+}
+
 /// An LLSD stream. May be either a UTF-8 stream or a byte stream.
 /// Generic trait.
 trait LLSDStream<C, S> {
