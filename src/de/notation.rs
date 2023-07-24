@@ -29,6 +29,36 @@ pub const LLSDNOTATIONPREFIX: &[u8] = b"<? llsd/notation ?>\n";
 /// Sentinel, must match exactly.
 pub const LLSDNOTATIONSENTINEL: &[u8] = LLSDNOTATIONPREFIX; 
 
+// ==================
+/// An LLSD stream. May be either a UTF-8 stream or a byte stream
+trait LLSDStream<C, S> {
+    /// Get next char
+    fn next(&mut self) -> Option<C>;
+    /// Peek at next char char
+    fn peek(&mut self) -> Option<&C>;
+}
+
+struct LLSDStreamChars<'a> {
+    /// Stream is composed of peekable chars
+    stream: Peekable<Chars<'a>>,
+}
+
+impl LLSDStream<char, Peekable<Chars<'_>>> for LLSDStreamChars<'_> {
+
+    fn next(&mut self) -> Option<char> {
+        self.stream.next()
+    }
+    
+    fn peek(&mut self) -> Option<&char> {
+        self.stream.peek()
+    }
+}
+
+
+
+
+// ==================
+
 type InputType<'a> = Peekable<Chars<'a>>;
 type AccumulateType = String;
 
