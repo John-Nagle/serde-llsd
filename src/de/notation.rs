@@ -328,12 +328,49 @@ impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
 
 #[test]
 /// Unit tests
-fn notation1() {
+fn notationparse1() {
     let s1 = "\"ABC☺DEF\"".to_string();  // string, including quotes, with emoji.
     let mut stream1 = LLSDStreamChars { cursor: s1.chars().peekable() };
     stream1.consume_char('"').unwrap(); // leading quote
     let v1 = stream1.parse_quoted_string('"').unwrap();
     assert_eq!(v1, "ABC☺DEF");
+}
+
+#[test]
+fn notationparse2() {
+    //  Linden Lab documented test data from wiki. Compatibility test use only.
+    const TESTNOTATION2: &str = r#"
+[
+  {'destination':l"http://secondlife.com"}, 
+  {'version':i1}, 
+  {
+    'agent_id':u3c115e51-04f4-523c-9fa6-98aff1034730, 
+    'session_id':u2c585cec-038c-40b0-b42e-a25ebab4d132, 
+    'circuit_code':i1075, 
+    'first_name':'Phoenix', 
+    'last_name':'Linden',
+    'position':[r70.9247,r254.378,r38.7304], 
+    'look_at':[r-0.043753,r-0.999042,r0], 
+    'granters':[ua2e76fcd-9360-4f6d-a924-000000000003],
+    'attachment_data':
+    [
+      {
+        'attachment_point':i2,
+        'item_id':ud6852c11-a74e-309a-0462-50533f1ef9b3,
+        'asset_id':uc69b29b1-8944-58ae-a7c5-2ca7b23e22fb
+      },
+      {
+        'attachment_point':i10, 
+        'item_id':uff852c22-a74e-309a-0462-50533f1ef900,
+        'asset_id':u5868dd20-c25a-47bd-8b4c-dedc99ef9479
+      }
+    ]
+  }
+]
+"#;
+    let mut stream2 = LLSDStreamChars { cursor: TESTNOTATION2.chars().peekable() };
+    let parsed2 = stream2.parse_value().unwrap();
+    println!("Parse of {}: \n{:#?}", TESTNOTATION2, parsed2);
 }
 
 
