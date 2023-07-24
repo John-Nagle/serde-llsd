@@ -77,7 +77,7 @@ trait LLSDStream<C, S> {
         //  Accumulate numeric chars.
         while let Some(ch) = self.peek() {
             match Self::into_char(ch) {
-                '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'+'|'-'|'.' => s.push(Self::into_char(&cursor.next().unwrap())),
+                '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'+'|'-'|'.' => s.push(Self::into_char(&self.next().unwrap())),
                  _ => break
             }
         }
@@ -86,14 +86,14 @@ trait LLSDStream<C, S> {
     }
     
     /// Parse Boolean
-    fn parse_boolean(mut self, first_char: char) -> Result<LLSDValue, Error> {
+    fn parse_boolean(&mut self, first_char: char) -> Result<LLSDValue, Error> {
         //  Accumulate next word
         let mut s = String::with_capacity(4);
         s.push(first_char);     // we already had the first character.        
         loop {              
             if let Some(ch) = self.peek() {
-                if Self:into_char(ch).is_alphabetic() {
-                    s.push(Self::into_char(cursor.next().unwrap()));
+                if Self::into_char(ch).is_alphabetic() {
+                    s.push(Self::into_char(&self.next().unwrap()));
                     continue
                 }
             }
