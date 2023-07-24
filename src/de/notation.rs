@@ -44,6 +44,14 @@ pub const LLSDNOTATIONSENTINEL: &[u8] = LLSDNOTATIONPREFIX;
 trait LLSDStream<C, S> {
     /// Get next char/byte
     fn next(&mut self) -> Option<C>;
+    /// Get next char/byte, result
+    fn next_ok(&mut self) -> Result<C, Error> {
+        if let Some(ch) = self.next() {
+            Ok(ch)
+        } else {
+            Err(anyhow!("Unexpected end of input parsing Notation"))
+        }           
+    }
     /// Peek at next char/byte
     fn peek(&mut self) -> Option<&C>;
     /// Convert into char
@@ -60,14 +68,11 @@ trait LLSDStream<C, S> {
     /// Consume expected non-whitespace char
     fn consume_char(&mut self, expected_ch: char) -> Result<(), Error> {
         self.consume_whitespace();
-        if let Some(ch) = self.next() {
-            if Self::into_char(&ch) != expected_ch {
-                Err(anyhow!("Expected '{}', found '{}'.", expected_ch, Self::into_char(&ch)))
-            } else {
-                Ok(())
-            }
+        let ch = Self::into_char(&self.next_ok()?);
+        if ch == expected_ch {
+            Ok(())
         } else {
-            Err(anyhow!("Expected '{}', found end of string.", expected_ch))
+            Err(anyhow!("Expected '{}', found '{}'.", expected_ch, ch))
         }
     }
 
@@ -120,7 +125,7 @@ trait LLSDStream<C, S> {
             _ => Err(anyhow!("Parsing Boolean, got {}", s)) 
         }
     }
-    // Parse string. "ABC" or 'ABC', with '\' as escape.
+    /// Parse string. "ABC" or 'ABC', with '\' as escape.
     /// Does not parse the numeric count prefix form.
     fn parse_quoted_string(&mut self, delim: char) -> Result<String, Error> {
         self.consume_whitespace();
@@ -243,11 +248,11 @@ impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
 #[test]
 /// Unit tests
 fn notation1() {
-    let s1 = "\"ABCDEF\"".to_string();  // string, including quotes
+    let s1 = "\"ABC☺DEF\"".to_string();  // string, including quotes, with emoji.
     let mut stream1 = LLSDStreamChars { cursor: s1.chars().peekable() };
     stream1.consume_char('"').unwrap(); // leading quote
     let v1 = stream1.parse_quoted_string('"').unwrap();
-    assert_eq!(v1, "ABCDEF");
+    assert_eq!(v1, "ABC☺DEF");
 }
 
 
