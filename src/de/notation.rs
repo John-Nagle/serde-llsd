@@ -240,7 +240,15 @@ impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
     
 }
 
-
+#[test]
+/// Unit tests
+fn notation1() {
+    let s1 = "\"ABCDEF\"".to_string();  // string, including quotes
+    let mut stream1 = LLSDStreamChars { cursor: s1.chars().peekable() };
+    stream1.consume_char('"').unwrap(); // leading quote
+    let v1 = stream1.parse_quoted_string('"').unwrap();
+    assert_eq!(v1, "ABCDEF");
+}
 
 
 // ==================
