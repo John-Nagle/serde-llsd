@@ -46,11 +46,17 @@ trait LLSDStream<C, S> {
     fn next(&mut self) -> Option<C>;
     /// Peek at next char/byte
     fn peek(&mut self) -> Option<&C>;
-    /// The parser
-    /// Parse a value, recursive.
-    fn parse_value(&mut self) -> Result<LLSDValue, Error> {
-        todo!();
+/*
+    /// Consume whitespace. Next char will be non-whitespace.
+    fn consume_whitespace(&mut self) {
+        while let Some(ch) = self.peek() {
+            match ch {
+                ' ' | '\n' => { let _ = self.next(); },                 // ignore leading white space
+                _ => break
+            }
+        }       
     }
+*/
 }
 
 /// Stream, composed of UTF-8 chars.
