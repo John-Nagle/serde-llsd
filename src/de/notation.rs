@@ -57,6 +57,20 @@ trait LLSDStream<C, S> {
             }
         }       
     }
+    /// Consume expected non-whitespace char
+    fn consume_char(&mut self, expected_ch: char) -> Result<(), Error> {
+        self.consume_whitespace();
+        if let Some(ch) = self.next() {
+            if Self::into_char(&ch) != expected_ch {
+                Err(anyhow!("Expected '{}', found '{}'.", expected_ch, Self::into_char(&ch)))
+            } else {
+                Ok(())
+            }
+        } else {
+            Err(anyhow!("Expected '{}', found end of string.", expected_ch))
+        }
+    }
+
     /// Parse "iNNN"
     fn parse_integer(&mut self) -> Result<LLSDValue, Error> {
         let mut s = String::with_capacity(20);  // pre-allocate; can still grow
@@ -105,6 +119,70 @@ trait LLSDStream<C, S> {
             "t" | "T" | "true" | "TRUE" => Ok(LLSDValue::Boolean(true)),
             _ => Err(anyhow!("Parsing Boolean, got {}", s)) 
         }
+    }
+    // Parse string. "ABC" or 'ABC', with '\' as escape.
+    /// Does not parse the numeric count prefix form.
+    fn parse_quoted_string(&mut self, delim: char) -> Result<String, Error> {
+        self.consume_whitespace();
+        let mut s = String::with_capacity(128);           // allocate reasonably large size
+        loop {
+            let ch_opt = self.next();                       // next char or None
+            let ch = if let Some(chr) = ch_opt {
+                Self::into_char(&chr)
+            } else {
+                return Err(anyhow!("String ended with EOF instead of quote."));
+            };
+            //  ch is a proper Char from now on.
+            if ch == delim { break };                       // normal final quote
+            if ch == '\\' {
+                if let Some(chr) = self.next() {
+                    s.push(Self::into_char(&chr))          // character after backslash
+                } else {
+                    return Err(anyhow!("String ended with EOF instead of quote."));
+                }
+            } else {
+                s.push(ch)
+            }
+        }
+        String::shrink_to_fit(&mut s);                      // release wasted space
+        Ok(s)
+    }   
+    /// Parse date string per RFC 1339.
+    fn parse_date(&mut self) -> Result<LLSDValue, Error> {
+        if let Some(delim) = self.next() {
+            if Self::into_char(&delim) == '"' || Self::into_char(&delim) == '\'' {
+                let s = self.parse_quoted_string(Self::into_char(&delim))?;
+                let naive_date =  DateTime::parse_from_rfc3339(&s)?; // parse date per RFC 3339.
+                Ok(LLSDValue::Date(naive_date.timestamp())) // seconds since UNIX epoch.
+            } else {
+                Err(anyhow!("URI did not begin with '\"'"))
+            }
+        } else {
+            Err(anyhow!("URI at end of file."))
+        }
+    }
+    
+    /// Parse URI string per rfc 1738
+    fn parse_uri(&mut self) -> Result<LLSDValue, Error> {
+        if let Some(delim) = self.next() {
+            if Self::into_char(&delim) == '"' || Self::into_char(&delim) == '\'' {
+                let s = self.parse_quoted_string(Self::into_char(&delim))?;
+                Ok(LLSDValue::URI(urlencoding::decode(&s)?.to_string()))
+            } else {
+                Err(anyhow!("URI did not begin with '\"'"))
+            }
+        } else {
+            Err(anyhow!("URI at end of file."))
+        }
+    }    
+    /// Parse UUID. No quotes
+    fn parse_uuid(&mut self) -> Result<LLSDValue, Error> {
+        const UUID_LEN: usize = "c69b29b1-8944-58ae-a7c5-2ca7b23e22fb".len();   // just to get the length of a standard format UUID.
+        let mut s = String::with_capacity(UUID_LEN);
+        for _ in 0..UUID_LEN {
+            s.push(Self::into_char(&(self.next().ok_or(anyhow!("EOF parsing UUID"))?)));
+        }
+        Ok(LLSDValue::UUID(Uuid::parse_str(&s)?))
     }
 
 }
