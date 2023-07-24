@@ -46,17 +46,30 @@ trait LLSDStream<C, S> {
     fn next(&mut self) -> Option<C>;
     /// Peek at next char/byte
     fn peek(&mut self) -> Option<&C>;
-/*
+    /// Convert into char
+    fn into_char(ch: &C) -> char;
     /// Consume whitespace. Next char will be non-whitespace.
     fn consume_whitespace(&mut self) {
         while let Some(ch) = self.peek() {
-            match ch {
+            match Self::into_char(ch) {
                 ' ' | '\n' => { let _ = self.next(); },                 // ignore leading white space
                 _ => break
             }
         }       
     }
-*/
+    /// Parse "iNNN"
+    fn parse_integer(&mut self) -> Result<LLSDValue, Error> {
+        let mut s = String::with_capacity(20);  // pre-allocate; can still grow
+        //  Accumulate numeric chars.
+        while let Some(ch) = self.peek() {
+            match Self::into_char(ch) {
+                '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'+'|'-' => s.push(Self::into_char(&self.next().unwrap())),
+                 _ => break
+            }
+        }
+        //  Digits accmulated, use standard conversion
+        Ok(LLSDValue::Integer(s.parse::<i32>()?))
+    }
 }
 
 /// Stream, composed of UTF-8 chars.
@@ -74,6 +87,10 @@ impl LLSDStream<char, Peekable<Chars<'_>>> for LLSDStreamChars<'_> {
     fn peek(&mut self) -> Option<&char> {
         self.cursor.peek()
     }
+    /// Into char, which is a null conversion
+    fn into_char(ch: &char) -> char {
+        *ch
+    }   
 }
 
 impl LLSDStreamChars<'_> {
@@ -101,6 +118,10 @@ impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
     fn peek(&mut self) -> Option<&u8> {
         self.cursor.peek()
     }
+    /// Into char, which is a null conversion
+    fn into_char(ch: &u8) -> char {
+        (*ch).into()
+    }   
     
 }
 
