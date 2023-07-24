@@ -296,34 +296,42 @@ impl LLSDStream<char, Peekable<Chars<'_>>> for LLSDStreamChars<'_> {
 }
 
 impl LLSDStreamChars<'_> {
-    ///    Parse LLSD string expressed in notation format into an LLSDObject tree. No header.
+    /// Parse LLSD string expressed in notation format into an LLSDObject tree. No header.
+    /// Strng form
     fn parse(notation_str: &str) -> Result<LLSDValue, Error> {
-        todo!();
-        ////let cursor = notation_str.chars().peekable();
-        ////let mut stream = Self { cursor };
-        ////stream.parse_value()
+        let mut stream = LLSDStreamChars { cursor: notation_str.chars().peekable() };
+        stream.parse_value()
     }
 }
 
 /// Stream, composed of raw bytes.
 struct LLSDStreamBytes<'a> {
     /// Stream is composed of peekable bytes.
-    cursor: Peekable<Bytes<'a>>,
+    cursor: Peekable<std::slice::Iter<'a, u8>>,
 }
 
 impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
-    /// Get next UTF-8 byte.
+    /// Get next byte.
     fn next(&mut self) -> Option<u8> {
-        self.cursor.next()
+        self.cursor.next().copied()
     }
-    /// Peek at next UTF-8 byte.
+    /// Peek at next byte.
     fn peek(&mut self) -> Option<&u8> {
-        self.cursor.peek()
+        self.cursor.peek().copied()
     }
-    /// Into char, which is a null conversion
+    /// Into char, which is a real conversion to a UTF-8 char.
     fn into_char(ch: &u8) -> char {
         (*ch).into()
     }    
+}
+
+impl LLSDStreamBytes<'_> {
+    /// Parse LLSD string expressed in notation format into an LLSDObject tree. No header.
+    /// Bytes form.
+    fn parse(notation_bytes: &[u8]) -> Result<LLSDValue, Error> {
+        let mut stream = LLSDStreamBytes { cursor: notation_bytes.iter().peekable() };
+        stream.parse_value()
+    }
 }
 
 #[test]
@@ -368,8 +376,9 @@ fn notationparse2() {
   }
 ]
 "#;
-    let mut stream2 = LLSDStreamChars { cursor: TESTNOTATION2.chars().peekable() };
-    let parsed2 = stream2.parse_value().unwrap();
+    ////let mut stream2 = LLSDStreamChars { cursor: TESTNOTATION2.chars().peekable() };
+    ////let parsed2 = stream2.parse_value().unwrap();
+    let parsed2 = LLSDStreamChars::parse(TESTNOTATION2);
     println!("Parse of {}: \n{:#?}", TESTNOTATION2, parsed2);
 }
 
