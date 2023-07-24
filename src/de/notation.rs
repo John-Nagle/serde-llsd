@@ -249,7 +249,28 @@ trait LLSDStream<C, S> {
     /// Parse one value - real, integer, map, etc. Recursive.
     /// This is the top level of the parser
     fn parse_value(&mut self) -> Result<LLSDValue, Error> {
-        todo!()
+        self.consume_whitespace();                      // ignore leading white space
+        let ch = Self::into_char(&self.next_ok()?);
+        match ch {
+            '!' => { Ok(LLSDValue::Undefined) }         // "Undefined" as a value
+            '0' => { Ok(LLSDValue::Boolean(false)) }    // false
+            '1' => { Ok(LLSDValue::Boolean(true)) }     // true
+            'f' | 'F' => { self.parse_boolean(ch) }     // false, all alpha forms
+            't' | 'T' => { self.parse_boolean(ch) }     // true, all alpha forms
+            '{' => { self.parse_map() }                 // map
+            '[' => { self.parse_array() }               // array
+            'i' => { self.parse_integer() }             // integer
+            'r' => { self.parse_real() }                // real
+            'd' => { self.parse_date() }                // date
+            'u' => { self.parse_uuid() }                // UUID
+            'l' => { self.parse_uri() }                 // URI
+            ////'b' => { parse_binary(cursor) }             // binary
+            ////'s' => { parse_sized_string(cursor) }       // string with explicit size
+            '"' => { Ok(LLSDValue::String(self.parse_quoted_string(ch)?)) }  // string, double quoted
+            '\'' => { Ok(LLSDValue::String(self.parse_quoted_string(ch)?)) }  // string, double quoted
+            //  ***MORE*** add cases for UUID, URL, date, and binary.
+            _ => { Err(anyhow!("Unexpected character: {:?}", ch)) } // error
+        }
     }
 }
 
