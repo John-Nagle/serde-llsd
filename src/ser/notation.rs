@@ -14,6 +14,7 @@
 use crate::LLSDValue;
 use anyhow::Error;
 use chrono::{TimeZone};
+use base64::Engine;
 //
 //  Constants
 //
@@ -70,10 +71,10 @@ fn generate_value(writer: &mut String, val: &LLSDValue) -> Result<(), Error> {
         }
         LLSDValue::Binary(v) => {
             writer.push('b');
-            writer.push('1');
             writer.push('6');
+            writer.push('4');
             writer.push('"');
-            writer.push_str(&hex::encode(v));
+            writer.push_str(&base64::engine::general_purpose::STANDARD.encode(v));
             writer.push('"');
         }
         LLSDValue::Date(v) => {
