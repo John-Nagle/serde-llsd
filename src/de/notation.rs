@@ -102,6 +102,7 @@ trait LLSDStream<C, S> {
     fn parse_real(&mut self) -> Result<LLSDValue, Error> {
         let mut s = String::with_capacity(20);  // pre-allocate; can still grow
         //  Accumulate numeric chars.
+        //  This will not accept NaN.
         while let Some(ch) = self.peek() {
             match Self::into_char(ch) {
                 '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'+'|'-'|'.' => s.push(Self::into_char(&self.next().unwrap())),
@@ -341,13 +342,12 @@ impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
     
     /// Parse binary value.
     /// Format is b16"value" or b64"value" or b(cnt)"value".
-    /// Not sure about that last form. Input to this is UTF-8.
     /// Putting text in this format is just wrong, yet the LL example does it.
-    /// This conversion may fail for non-UTF8 input.
+    /// This conversion may fail for non-ASCII input.
     //
     //  The LL parser for this is at
     //  https://github.com/secondlife/viewer/blob/ec4135da63a3f3877222fba4ecb59b15650371fe/indra/llcommon/llsdserialize.cpp#L789
-    //  That reads N bytes from the input as a byte stream. But we're working with UTF-8. This is a problem.
+    //  That reads N bytes from the input as a byte stream. We only do this for byte streams, not Strings.
     //
     fn parse_binary(&mut self) -> Result<LLSDValue, Error> {
         if let Some(ch) = self.peek() {
@@ -356,8 +356,8 @@ impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
                     let cnt = self.parse_number_in_parentheses()?;
                     self.consume_char('"')?;
                     let s = self.next_chunk(cnt)?;
-                    self.consume_char('"')?;  // count must be correct or this will fail.
-                    Ok(LLSDValue::String(s))     // not sure about this
+                    self.consume_char('"')?;     // count must be correct or this will fail.
+                    Ok(LLSDValue::Binary(s))     // not sure about this
                 }                 
                 '1' => {
                     self.consume_char('1')?;
@@ -388,13 +388,12 @@ impl LLSDStream<u8, Peekable<Bytes<'_>>> for LLSDStreamBytes<'_> {
     /// Format is s(NNN)"string"
     fn parse_sized_string(&mut self) -> Result<LLSDValue, Error> {
         let cnt = self.parse_number_in_parentheses()?;
-        println!("String size is {}", cnt);
-        //  At this point, we are supposed to have a quoted string with no escape chararacters. I think.
-        //  This may have problems with non-UTF8 encoding.
+        //  At this point, we are supposed to have a quoted string of ASCII characters.
+        //  If this can be validy converted as UTF-8, it will be accepted.
         self.consume_char('"')?;
         let s = self.next_chunk(cnt)?;
         self.consume_char('"')?;
-        Ok(LLSDValue::String(s))
+        Ok(LLSDValue::String(String::from_utf8(s)?))
     }
 }
 
@@ -405,20 +404,8 @@ impl LLSDStreamBytes<'_> {
         let mut stream = LLSDStreamBytes { cursor: notation_bytes.iter().peekable() };
         stream.parse_value()
     }
-    
-    /// Parse sized string.
-    /// Format is s(NNN)"string"
-    fn parse_sized_string(&mut self) -> Result<LLSDValue, Error> {
-        let cnt = self.parse_number_in_parentheses()?;
-        println!("String size is {}", cnt);
-        //  At this point, we are supposed to have a quoted string with no escape chararacters. I think.
-        //  This may have problems with non-UTF8 encoding.
-        self.consume_char('"')?;
-        let s = self.next_chunk(cnt)?;
-        self.consume_char('"')?;
-        Ok(LLSDValue::String(s))
-    }
-    
+
+    /// Parse (NNN), which is used for length information.
     fn parse_number_in_parentheses(&mut self) -> Result<usize, Error> {
         self.consume_char('(')?;
         let val = self.parse_integer()?;
@@ -430,12 +417,12 @@ impl LLSDStreamBytes<'_> {
         }
     }
     
-    /// Read chunk of N characters.
-    fn next_chunk(&mut self, cnt: usize) -> Result<String, Error> {
-        let mut s = String::with_capacity(cnt);
+    /// Read chunk of N bytes.
+    fn next_chunk(&mut self, cnt: usize) -> Result<Vec<u8>, Error> {
+        let mut s = Vec::with_capacity(cnt);
         //  next_chunk, for getting N chars, doesn't work yet.
         for _ in 0..cnt {
-            s.push(Self::into_char(&self.next_ok()?));
+            s.push(self.next_ok()?);
         }
         Ok(s)
     }
@@ -526,4 +513,18 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 "#;
     let parsed_b = LLSDStreamBytes::parse(TESTNOTATION3.as_bytes());
     println!("Parse of byte form: {:#?}", parsed_b);
+}
+
+#[test]
+fn notationparse4() {
+    //  This is a "material override".
+    const TESTNOTATION4: &str = r#"
+        {'gltf_json':['{\"asset\":{\"version\":\"2.0\"},\"images\":[{\"uri\":\"5748decc-f629-461c-9a36-a35a221fe21f\"},
+            {\"uri\":\"5748decc-f629-461c-9a36-a35a221fe21f\"}],\"materials\":[{\"occlusionTexture\":{\"index\":1},\"pbrMetallicRoughness\":{\"metallicRoughnessTexture\":{\"index\":0},\"roughnessFactor\":0.20000000298023224}}],\"textures\":[{\"source\":0},
+            {\"source\":1}]}\\n'],'local_id':i8893800,'object_id':u6ac43d70-80eb-e526-ec91-110b4116293e,'region_handle_x':i342016,'region_handle_y':i343552,'sides':[i0]}"
+"#;
+    let parsed_b = LLSDStreamBytes::parse(TESTNOTATION4.as_bytes());
+    println!("Parse of byte form: {:#?}", parsed_b);
+    let local_id = *parsed_b.unwrap().as_map().unwrap().get("local_id").unwrap().as_integer().unwrap();
+    assert_eq!(local_id, 8893800); // validate local ID
 }
