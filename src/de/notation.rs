@@ -70,6 +70,43 @@ trait LLSDStream<C, S> {
         //  Digits accmulated, use standard conversion
         Ok(LLSDValue::Integer(s.parse::<i32>()?))
     }
+        /// Parse "rNNN".
+    //  Does "notation" allow exponents?
+    fn parse_real(&mut self) -> Result<LLSDValue, Error> {
+        let mut s = String::with_capacity(20);  // pre-allocate; can still grow
+        //  Accumulate numeric chars.
+        while let Some(ch) = self.peek() {
+            match Self::into_char(ch) {
+                '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'+'|'-'|'.' => s.push(Self::into_char(&cursor.next().unwrap())),
+                 _ => break
+            }
+        }
+        //  Digits accmulated, use standard conversion
+        Ok(LLSDValue::Real(s.parse::<f64>()?))
+    }
+    
+    /// Parse Boolean
+    fn parse_boolean(mut self, first_char: char) -> Result<LLSDValue, Error> {
+        //  Accumulate next word
+        let mut s = String::with_capacity(4);
+        s.push(first_char);     // we already had the first character.        
+        loop {              
+            if let Some(ch) = self.peek() {
+                if Self:into_char(ch).is_alphabetic() {
+                    s.push(Self::into_char(cursor.next().unwrap()));
+                    continue
+                }
+            }
+            break;
+        }
+        //  Check for all the allowed Boolean forms.
+        match s.as_str() {
+            "f" | "F" | "false" | "FALSE" => Ok(LLSDValue::Boolean(false)),
+            "t" | "T" | "true" | "TRUE" => Ok(LLSDValue::Boolean(true)),
+            _ => Err(anyhow!("Parsing Boolean, got {}", s)) 
+        }
+    }
+
 }
 
 /// Stream, composed of UTF-8 chars.
