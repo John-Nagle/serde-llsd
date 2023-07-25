@@ -6,7 +6,32 @@ pub mod notation;
 use anyhow::{anyhow, Error};
 
 /// Parse LLSD, detecting format.
-/// Recognizes binary and XML LLSD, with or without sentinel.
+/// Recognizes Notation, and XML LLSD with sentinels
+pub fn from_str(msg_string: &str) -> Result<crate::LLSDValue, Error> {
+    let msg_string = msg_string.trim_start();   // remove leading whitespace
+    //  Try Notation sentinel
+    if msg_string.starts_with(notation::LLSDNOTATIONSENTINEL) {
+        return notation::from_str(&msg_string[notation::LLSDNOTATIONSENTINEL.len()..]);
+    }
+    
+    //  Try XML sentinel.
+    if msg_string.starts_with(xml::LLSDXMLSENTINEL) {
+        // try XML
+        return xml::from_str(msg_string);
+    }
+    //  Trim string to N chars for error msg.
+    let snippet = msg_string
+        .chars()
+        .zip(0..60)
+        .map(|(c, _)| c)
+        .collect::<String>();
+    Err(anyhow!("LLSD format not recognized: {:?}", snippet))
+}
+
+
+
+/// Parse LLSD, detecting format.
+/// Recognizes binary, Notation, and XML LLSD, with or without sentinel.
 pub fn from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
     //  Try sentinels first.
     //  Binary sentinel
@@ -16,10 +41,10 @@ pub fn from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
         return binary::from_bytes(&msg[binary::LLSDBINARYSENTINEL.len()..]);
     }
     //  Try Notation sentinel
-    if msg.len() >= notation::LLSDNOTATIONSENTINEL.len()
-        && &msg[0..notation::LLSDNOTATIONSENTINEL.len()] == notation::LLSDNOTATIONSENTINEL
+    if msg.len() >= notation::LLSDNOTATIONSENTINEL.as_bytes().len()
+        && &msg[0..notation::LLSDNOTATIONSENTINEL.as_bytes().len()] == notation::LLSDNOTATIONSENTINEL.as_bytes()
     {
-        return notation::from_bytes(&msg[notation::LLSDNOTATIONSENTINEL.len()..]);
+        return notation::from_bytes(&msg[notation::LLSDNOTATIONSENTINEL.as_bytes().len()..]);
     }
     
     //  Check for binary without header. If array or map marker, parse.

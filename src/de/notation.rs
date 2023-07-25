@@ -34,9 +34,9 @@ use base64::Engine;
 //  Constants
 //
 /// Notation LLSD prefix
-pub const LLSDNOTATIONPREFIX: &[u8] = b"<? llsd/notation ?>\n"; 
+pub const LLSDNOTATIONPREFIX: &str = "<? llsd/notation ?>\n"; 
 /// Sentinel, must match exactly.
-pub const LLSDNOTATIONSENTINEL: &[u8] = LLSDNOTATIONPREFIX;
+pub const LLSDNOTATIONSENTINEL: &str = LLSDNOTATIONPREFIX;
 
 /// Exported parse from bytes.
 pub fn from_bytes(b: &[u8]) -> Result<LLSDValue, Error> {
