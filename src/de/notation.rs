@@ -53,6 +53,7 @@ pub fn from_str(s: &str) -> Result<LLSDValue, Error> {
 trait LLSDStream<C, S> {
     /// Get next char/byte
     fn next(&mut self) -> Option<C>;
+    
     /// Get next char/byte, result
     fn next_ok(&mut self) -> Result<C, Error> {
         if let Some(ch) = self.next() {
@@ -61,8 +62,10 @@ trait LLSDStream<C, S> {
             Err(anyhow!("Unexpected end of input parsing Notation"))
         }           
     }
+    
     /// Peek at next char/byte
     fn peek(&mut self) -> Option<&C>;
+    
     //  Peek at next char, as result
     fn peek_ok(&mut self) -> Result<&C, Error> {
         if let Some(ch) = self.peek() {
@@ -71,20 +74,32 @@ trait LLSDStream<C, S> {
             Err(anyhow!("Unexpected end of input parsing Notation"))
         }           
     }
+    
     /// Convert into char
     fn into_char(ch: &C) -> char;
+    
     /// Consume whitespace. Next char will be non-whitespace.
-    fn consume_whitespace(&mut self) {
+    //  Need to treat explicit "\n" as whitespace.
+    fn consume_whitespace(&mut self) -> Result<(), Error> {
         while let Some(ch) = self.peek() {
             match Self::into_char(ch) {
                 ' ' | '\n' => { let _ = self.next(); },                 // ignore leading white space
+                '\\' => {
+                    let _ = self.next();                                // consume backslash
+                    let ch = Self::into_char(&self.next_ok()?);         // expecting 'n'
+                    if ch != 'n' {                                      // Explicit "\n" is normal white space
+                        return Err(anyhow!("Unexpected escape sequence \"\\{}\" where white space expected.", ch));
+                    }   
+                }
                 _ => break
             }
-        }       
+        }
+        Ok(())  
     }
+    
     /// Consume expected non-whitespace char
     fn consume_char(&mut self, expected_ch: char) -> Result<(), Error> {
-        self.consume_whitespace();
+        self.consume_whitespace()?;
         let ch = Self::into_char(&self.next_ok()?);
         if ch == expected_ch {
             Ok(())
@@ -146,7 +161,7 @@ trait LLSDStream<C, S> {
     /// Parse string. "ABC" or 'ABC', with '\' as escape.
     /// Does not parse the numeric count prefix form.
     fn parse_quoted_string(&mut self, delim: char) -> Result<String, Error> {
-        self.consume_whitespace();
+        self.consume_whitespace()?;
         let mut s = String::with_capacity(128);           // allocate reasonably large size
         loop {
             let ch_opt = self.next();                       // next char or None
