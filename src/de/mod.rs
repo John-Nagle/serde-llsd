@@ -7,7 +7,7 @@ use anyhow::{anyhow, Error};
 
 /// Parse LLSD, detecting format.
 /// Recognizes Notation, and XML LLSD with sentinels
-pub fn from_str(msg_string: &str) -> Result<crate::LLSDValue, Error> {
+pub fn auto_from_str(msg_string: &str) -> Result<crate::LLSDValue, Error> {
     let msg_string = msg_string.trim_start();   // remove leading whitespace
     //  Try Notation sentinel
     if msg_string.starts_with(notation::LLSDNOTATIONSENTINEL) {
@@ -28,11 +28,9 @@ pub fn from_str(msg_string: &str) -> Result<crate::LLSDValue, Error> {
     Err(anyhow!("LLSD format not recognized: {:?}", snippet))
 }
 
-
-
 /// Parse LLSD, detecting format.
 /// Recognizes binary, Notation, and XML LLSD, with or without sentinel.
-pub fn from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
+pub fn auto_from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
     //  Try sentinels first.
     //  Binary sentinel
     if msg.len() >= binary::LLSDBINARYSENTINEL.len()
@@ -94,7 +92,7 @@ fn testpbrmaterialdecode() {
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(clean_base64)
         .expect("PBR example failed base64 decode"); // as bytes
-    let llsd = from_bytes(&bytes).expect("LLSD decode failed");
+    let llsd = auto_from_bytes(&bytes).expect("LLSD decode failed");
     println!("PBR asset: {:?}", llsd);
     //  Display as XML
     println!(

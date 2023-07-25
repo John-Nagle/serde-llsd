@@ -19,7 +19,7 @@ pub mod ser;
 
 pub use crate::{
     de::{
-        from_bytes,
+        auto_from_bytes, auto_from_str,
         binary::from_bytes as binary_from_bytes,
         binary::from_reader as binary_from_reader, // Name clash
         xml::from_reader,
