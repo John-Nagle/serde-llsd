@@ -159,24 +159,20 @@ trait LLSDStream<C, S> {
         }
     }
     /// Parse string. "ABC" or 'ABC', with '\' as escape.
+    /// Allowed escapes are \\, \", \', and \n
     /// Does not parse the numeric count prefix form.
     fn parse_quoted_string(&mut self, delim: char) -> Result<String, Error> {
         self.consume_whitespace()?;
-        let mut s = String::with_capacity(128);           // allocate reasonably large size
+        let mut s = String::with_capacity(128);             // allocate reasonably large size for typical string.
         loop {
-            let ch_opt = self.next();                       // next char or None
-            let ch = if let Some(chr) = ch_opt {
-                Self::into_char(&chr)
-            } else {
-                return Err(anyhow!("String ended with EOF instead of quote."));
-            };
-            //  ch is a proper Char from now on.
-            if ch == delim { break };                       // normal final quote
-            if ch == '\\' {
-                if let Some(chr) = self.next() {
-                    s.push(Self::into_char(&chr))          // character after backslash
-                } else {
-                    return Err(anyhow!("String ended with EOF instead of quote."));
+            let ch = Self::into_char(&self.next_ok()?);     // next char, must be present
+            if ch == delim { break }                        // end of string
+            if ch == '\\' {                                 // escape
+                let ch = Self::into_char(&self.next_ok()?); // next char, must be present
+                match ch {
+                    '\\' | '\'' | '\"' => s.push(ch),       // escapable characters
+                    'n' => s.push('\n'),                    // backslash n becomes newline
+                    _ => { return Err(anyhow!("Unexpected escape sequence \"\\{}\" within quoted string.", ch)); }
                 }
             } else {
                 s.push(ch)
@@ -547,6 +543,7 @@ fn notationparse4() {
             {\"uri\":\"5748decc-f629-461c-9a36-a35a221fe21f\"}],\"materials\":[{\"occlusionTexture\":{\"index\":1},\"pbrMetallicRoughness\":{\"metallicRoughnessTexture\":{\"index\":0},\"roughnessFactor\":0.20000000298023224}}],\"textures\":[{\"source\":0},
             {\"source\":1}]}\\n'],'local_id':i8893800,'object_id':u6ac43d70-80eb-e526-ec91-110b4116293e,'region_handle_x':i342016,'region_handle_y':i343552,'sides':[i0]}"
 "#;
+    println!("Test notationparse4");
     let parsed_b = LLSDStreamBytes::parse(TESTNOTATION4.as_bytes());
     println!("Parse of byte form: {:#?}", parsed_b);
     let local_id = *parsed_b.unwrap().as_map().unwrap().get("local_id").unwrap().as_integer().unwrap();

@@ -10,10 +10,9 @@ use anyhow::{anyhow, Error};
 pub fn auto_from_str(msg_string: &str) -> Result<crate::LLSDValue, Error> {
     let msg_string = msg_string.trim_start();   // remove leading whitespace
     //  Try Notation sentinel
-    if msg_string.starts_with(notation::LLSDNOTATIONSENTINEL) {
-        return notation::from_str(&msg_string[notation::LLSDNOTATIONSENTINEL.len()..]);
+    if let Some(stripped) = msg_string.strip_prefix(notation::LLSDNOTATIONSENTINEL) {
+        return notation::from_str(stripped);
     }
-    
     //  Try XML sentinel.
     if msg_string.starts_with(xml::LLSDXMLSENTINEL) {
         // try XML
