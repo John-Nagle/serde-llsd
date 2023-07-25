@@ -227,7 +227,7 @@ trait LLSDStream<C, S> {
     fn parse_map(&mut self) -> Result<LLSDValue, Error> {
         let mut kvmap = HashMap::new();                         // building map
         loop {
-            self.consume_whitespace();
+            self.consume_whitespace()?;
             let key =  {
                 let ch = Self::into_char(&self.next_ok()?);
                 match ch {
@@ -240,7 +240,7 @@ trait LLSDStream<C, S> {
             let value = self.parse_value()?;           // value of key:value
             kvmap.insert(key, value);
             //  Check for comma indicating more items.
-            self.consume_whitespace();
+            self.consume_whitespace()?;
             if Self::into_char(self.peek_ok()?) == ',' {
                 let _ = self.next();    // consume comma, continue with next field
             }
@@ -256,14 +256,14 @@ trait LLSDStream<C, S> {
         //  Accumulate array elements.
         loop {
             //  Check for end of items
-            self.consume_whitespace();
+            self.consume_whitespace()?;
             let ch = Self::into_char(self.peek_ok()?);
             if ch == ']' {
                 let _ = self.next(); break;    // end of array, may be empty.
             }
             array_items.push(self.parse_value()?);          // parse next value
             //  Check for comma indicating more items.
-            self.consume_whitespace();
+            self.consume_whitespace()?;
             if Self::into_char(self.peek_ok()?) == ',' {
                 let _ = self.next();    // consume comma, continue with next field
             }           
@@ -279,7 +279,7 @@ trait LLSDStream<C, S> {
     /// Parse one value - real, integer, map, etc. Recursive.
     /// This is the top level of the parser
     fn parse_value(&mut self) -> Result<LLSDValue, Error> {
-        self.consume_whitespace();                      // ignore leading white space
+        self.consume_whitespace()?;                      // ignore leading white space
         let ch = Self::into_char(&self.next_ok()?);
         match ch {
             '!' => { Ok(LLSDValue::Undefined) }         // "Undefined" as a value
