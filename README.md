@@ -12,9 +12,10 @@ There are three formats - XML, binary, and "Notation". All store
 the same data, which is roughly the same as what JSON can represent.
 Parsing and output functions are provided.
 
+
+
 ## Status
-XML and binary versions are implemented.
-"Notation" will not be implemented at this time.
+XML, binary, and Notation versions are implemented.
 
 Unit tests pass. Tested against Second Life asset servers and Open Simulator servers.
 Used by the Sharpview metaverse viewer.
@@ -47,4 +48,23 @@ will yield the integer value.
 
 These generally follow the conventions of the Rust crate "json".
 An LLSD value is a tree.
+
+## Character sets
+
+Notation is divided into a byte stream form and a string from. 
+
+The byte stream form supports all the formats defined for LLSD, including
+byte-counted strings and binary values. Only single-byte ASCII characters are allowed.
+Byte stream form Notation cannot be placed inside LLSD XML, because the byte streams
+will not be valid UTf-8.
+
+The string form is valid UTF-8, but will not accept byte-counted strings or binary values.
+Binary values must be in hex or Base64 format. String-form Notation can be placed inside
+LLSD XML.
+
+## Known problems.
+- "Notation" fomat input will not currently accept infinity or NaN values.
+
+- Error messages do not indicate the source of the problem in the incoming stream.
+
 
