@@ -1,6 +1,6 @@
 [package]
 name = "serde-llsd"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 authors = ["John-Nagle <nagle@animats.com>"]
 description = "Library for serializing and de-serializing data in Linden Lab Structured Data format. This format is used by Second Life and Open Simulator"

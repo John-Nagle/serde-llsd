@@ -550,8 +550,11 @@ XgAAAAhwEQjRABeVAAAABQBjW14AAAAAYFRvdWNoZWQuAGYAAAAAXF4AAAAIcBEI0QAXAZUAAEAA
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" 
 ]
 "#;
-    let parsed_b = LLSDStreamBytes::parse(TESTNOTATION3.as_bytes());
+    let parsed_b = from_bytes(TESTNOTATION3.as_bytes()).unwrap();
     println!("Parse of byte form: {:#?}", parsed_b);
+    let parsed_b = from_str(TESTNOTATION3);
+    assert!(parsed_b.is_err());             // not allowed to have b(158) or s(10) in string mode.
+    println!("Parse of string form: {:#?}", parsed_b);
 }
 
 #[test]
