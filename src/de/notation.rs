@@ -336,7 +336,14 @@ impl LLSDStreamChars<'_> {
     /// Strng form
     pub fn parse(notation_str: &str) -> Result<LLSDValue, Error> {
         let mut stream = LLSDStreamChars { cursor: notation_str.chars().peekable() };
-        stream.parse_value()
+        match stream.parse_value() {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                //  Useful error message
+                let s = beginning_to_iterator(notation_str, &stream.cursor);
+                Err(anyhow!("LLSD notation string parse error: {:?}. Parse got this far: {}", e, s))
+            }
+        }
     }
 }
 
@@ -449,6 +456,18 @@ impl LLSDStreamBytes<'_> {
 
 }
 
+//  Utility functions
+/// Extract the part of a string from the beginning to an iterator.
+fn beginning_to_iterator<'a>(orig: &'a str, pos: &Peekable<Chars>) -> &'a str {
+    let suffix: String = pos.clone().collect();
+    println!("Suffix: {}", suffix);
+    if let Some(s) = orig.strip_suffix(&suffix) {
+        s
+    } else {
+        orig
+    }
+}
+
 #[test]
 /// Unit tests
 fn notationparse1() {
@@ -543,9 +562,26 @@ fn notationparse4() {
             {\"uri\":\"5748decc-f629-461c-9a36-a35a221fe21f\"}],\"materials\":[{\"occlusionTexture\":{\"index\":1},\"pbrMetallicRoughness\":{\"metallicRoughnessTexture\":{\"index\":0},\"roughnessFactor\":0.20000000298023224}}],\"textures\":[{\"source\":0},
             {\"source\":1}]}\\n'],'local_id':i8893800,'object_id':u6ac43d70-80eb-e526-ec91-110b4116293e,'region_handle_x':i342016,'region_handle_y':i343552,'sides':[i0]}"
 "#;
-    println!("Test notationparse4");
-    let parsed_b = LLSDStreamBytes::parse(TESTNOTATION4.as_bytes());
+    let parsed_b = from_bytes(TESTNOTATION4.as_bytes());
     println!("Parse of byte form: {:#?}", parsed_b);
     let local_id = *parsed_b.unwrap().as_map().unwrap().get("local_id").unwrap().as_integer().unwrap();
     assert_eq!(local_id, 8893800); // validate local ID
+    let parsed_b = from_str(TESTNOTATION4);
+    println!("Parse of str form: {:#?}", parsed_b);
+    let local_id = *parsed_b.unwrap().as_map().unwrap().get("local_id").unwrap().as_integer().unwrap();
+    assert_eq!(local_id, 8893800); // validate local ID
+}
+
+#[test]
+fn notationparse5() {
+    //  Parse with error. Note unwanted backslash in "images".
+    const TESTNOTATION5: &str = r#"
+        {'gltf_json':['{\"asset\":{\"version\":\"2.0\"},\"im\ages\":[{\"uri\":\"5748decc-f629-461c-9a36-a35a221fe21f\"},
+            {\"uri\":\"5748decc-f629-461c-9a36-a35a221fe21f\"}],\"materials\":[{\"occlusionTexture\":{\"index\":1},\"pbrMetallicRoughness\":{\"metallicRoughnessTexture\":{\"index\":0},\"roughnessFactor\":0.20000000298023224}}],\"textures\":[{\"source\":0},
+            {\"source\":1}]}\\n'],'local_id':i8893800,'object_id':u6ac43d70-80eb-e526-ec91-110b4116293e,'region_handle_x':i342016,'region_handle_y':i343552,'sides':[i0]}"
+"#;
+    println!("Test notationparse5");
+    let parsed_b = from_str(TESTNOTATION5);
+    println!("Parse of byte form: {:#?}", parsed_b);
+    assert!(parsed_b.is_err());
 }
