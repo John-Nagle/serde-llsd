@@ -510,8 +510,6 @@ fn notationparse2() {
   }
 ]
 "#;
-    ////let mut stream2 = LLSDStreamChars { cursor: TESTNOTATION2.chars().peekable() };
-    ////let parsed2 = stream2.parse_value().unwrap();
     let parsed_s = LLSDStreamChars::parse(TESTNOTATION2);
     println!("Parse of string form {}: \n{:#?}", TESTNOTATION2, parsed_s);
     let parsed_b = LLSDStreamBytes::parse(TESTNOTATION2.as_bytes());

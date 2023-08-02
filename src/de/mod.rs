@@ -9,8 +9,8 @@ use anyhow::{anyhow, Error};
 /// Recognizes Notation, and XML LLSD with sentinels
 pub fn auto_from_str(msg_string: &str) -> Result<crate::LLSDValue, Error> {
     let msg_string = msg_string.trim_start();   // remove leading whitespace
-    //  Try Notation sentinel
-    if let Some(stripped) = msg_string.strip_prefix(notation::LLSDNOTATIONSENTINEL) {
+    //  Try Notation sentinel. Tolerate missing newline at end of sentinel.
+    if let Some(stripped) = msg_string.strip_prefix(notation::LLSDNOTATIONSENTINEL.trim_end()) {
         return notation::from_str(stripped);
     }
     //  Try XML sentinel.
@@ -29,6 +29,7 @@ pub fn auto_from_str(msg_string: &str) -> Result<crate::LLSDValue, Error> {
 
 /// Parse LLSD, detecting format.
 /// Recognizes binary, Notation, and XML LLSD, with or without sentinel.
+/// Will not accept leading whitespace.
 pub fn auto_from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
     //  Try sentinels first.
     //  Binary sentinel
@@ -37,11 +38,12 @@ pub fn auto_from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
     {
         return binary::from_bytes(&msg[binary::LLSDBINARYSENTINEL.len()..]);
     }
-    //  Try Notation sentinel
-    if msg.len() >= notation::LLSDNOTATIONSENTINEL.as_bytes().len()
-        && &msg[0..notation::LLSDNOTATIONSENTINEL.as_bytes().len()] == notation::LLSDNOTATIONSENTINEL.as_bytes()
+    //  Try Notation sentinel. Tolerate trailing newline.
+    let sentinel = notation::LLSDNOTATIONSENTINEL.trim_end().as_bytes();  // sentinel without the trailing newline
+    if msg.len() >= sentinel.len()
+        && &msg[0..sentinel.len()] == sentinel
     {
-        return notation::from_bytes(&msg[notation::LLSDNOTATIONSENTINEL.as_bytes().len()..]);
+        return notation::from_bytes(&msg[sentinel.len()..]);
     }
     
     //  Check for binary without header. If array or map marker, parse.
@@ -60,8 +62,6 @@ pub fn auto_from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
         return xml::from_str(msgstring);
     }
 
-
-    //  "Notation" syntax is not currently supported.
     //  Trim string to N chars for error msg.
     let snippet = msgstring
         .chars()
@@ -98,4 +98,27 @@ fn testpbrmaterialdecode() {
         "As XML: \n{}",
         crate::ser::xml::to_string(&llsd, true).expect("Conversion to XML failed")
     );
+}
+
+#[test]
+fn testnotationdetect1() {
+    //  Test recognzier with trailing newline
+    const TESTNOTATION1A: &str = r#"<? llsd/notation ?>\n
+[
+  {'destination':l"http://secondlife.com"}, 
+]
+"#;
+    //  No trailing newline
+    const TESTNOTATION1B: &str = r#"<? llsd/notation ?>
+[
+  {'destination':l"http://secondlife.com"}, 
+]
+"#;
+    let parsed_sa = auto_from_str(TESTNOTATION1A).unwrap();
+    let parsed_sb = auto_from_str(TESTNOTATION1B).unwrap();
+    assert_eq!(parsed_sa, parsed_sb);              // must match, with and without trailing whitespace.
+    let parsed_ba = auto_from_bytes(TESTNOTATION1A.as_bytes()).unwrap();
+    let parsed_bb = auto_from_bytes(TESTNOTATION1B.as_bytes()).unwrap();
+    assert_eq!(parsed_ba, parsed_bb);              // must match, with and without trailing whitespace.
+
 }
