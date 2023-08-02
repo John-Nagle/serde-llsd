@@ -119,23 +119,24 @@ fn testpbrmaterialdecode() {
 
 #[test]
 fn testnotationdetect1() {
-    //  Test recognzier with trailing newline
-    const TESTNOTATION1A: &str = r#"<? llsd/notation ?>\n
-[
-  {'destination':l"http://secondlife.com"}, 
-]
-"#;
-    //  No trailing newline
-    const TESTNOTATION1B: &str = r#"<? llsd/notation ?>
-[
-  {'destination':l"http://secondlife.com"}, 
+    //  Test recognzier with trailing newline, no excess whitespace. This is the canonical form.
+    const TESTNOTATION1A: &str = r#"<? llsd/notation ?>
+[{'destination':"http://example.com"}]"#;
+    //  No trailing newline, plus leading whitespace.
+    //  This is not compliant with the spec but is tolerated for compatibiilty.
+    const TESTNOTATION1B: &str = r#"
+    <? llsd/notation ?>[
+  {'destination':"http://example.com"}, 
 ]
 "#;
     let parsed_sa = auto_from_str(TESTNOTATION1A).unwrap();
     let parsed_sb = auto_from_str(TESTNOTATION1B).unwrap();
     assert_eq!(parsed_sa, parsed_sb);              // must match, with and without trailing whitespace.
+    let s = crate::notation_to_string(&parsed_sa).unwrap();
+    assert_eq!(TESTNOTATION1A, s);                 // check round-trip
     let parsed_ba = auto_from_bytes(TESTNOTATION1A.as_bytes()).unwrap();
     let parsed_bb = auto_from_bytes(TESTNOTATION1B.as_bytes()).unwrap();
     assert_eq!(parsed_ba, parsed_bb);              // must match, with and without trailing whitespace.
-
+    ////let b = crate::notation_to_bytes(&parsed_ba).unwrap();
+    ////assert_eq!(TESTNOTATION1A.as_bytes(), b);         // must match correct form
 }

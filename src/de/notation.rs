@@ -227,7 +227,7 @@ trait LLSDStream<C, S> {
             let key =  {
                 let ch = Self::into_char(&self.next_ok()?);
                 match ch {
-                    '}' => { let _ = self.next(); break } // end of map, may be empty.
+                    '}' => { break } // end of map, may be empty.
                     '\'' | '"' => self.parse_quoted_string(ch)?, 
                     _ => { return Err(anyhow!("Map key began with {} instead of quote.", ch)); }
                 }

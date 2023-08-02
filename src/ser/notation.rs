@@ -23,13 +23,16 @@ pub const LLSDNOTATIONPREFIX: &str = "<? llsd/notation ?>\n";
 /// Sentinel, must match exactly.
 pub const LLSDNOTATIONSENTINEL: &str = LLSDNOTATIONPREFIX; 
 
-/// Outputs an LLSDValue as a string of bytes, in LLSD "binary" format.
+/// Outputs an LLSDValue as a string of bytes, in LLSD "notation" format.
 pub fn to_string(val: &LLSDValue) -> Result<String, Error> {
     let mut writer = String::new();
     writer.push_str(LLSDNOTATIONPREFIX); // prefix
     generate_value(&mut writer, val)?;
     Ok(writer)
 }
+
+//  There could be a corresponding function to generate LLSD notation as bytes,
+//  but that creates transparency problems best avoided.
 
 /*
 /// Outputs an LLSD value to an output stream
@@ -143,7 +146,7 @@ fn escape_url(s: &str) -> String {
     urlencoding::encode(s).to_string()
 }
 
-//  Temporary test case
+//  Limited test case. Better tests on decode side.
 #[test]
 fn notationgentest1() {
     const TESTXMLNAN: &str = r#"
