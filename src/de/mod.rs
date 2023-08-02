@@ -6,7 +6,8 @@ pub mod notation;
 use anyhow::{anyhow, Error};
 
 /// Parse LLSD, detecting format.
-/// Recognizes Notation, and XML LLSD with sentinels
+/// Recognizes Notation, and XML LLSD with sentinels.
+/// Will accept leading whitespace.
 pub fn auto_from_str(msg_string: &str) -> Result<crate::LLSDValue, Error> {
     let msg_string = msg_string.trim_start();   // remove leading whitespace
     //  Try Notation sentinel. Tolerate missing newline at end of sentinel.
@@ -29,7 +30,7 @@ pub fn auto_from_str(msg_string: &str) -> Result<crate::LLSDValue, Error> {
 
 /// Parse LLSD, detecting format.
 /// Recognizes binary, Notation, and XML LLSD, with or without sentinel.
-/// Will not accept leading whitespace.
+/// Will accept leading whitespace for text forms, but not binary. That's strict.
 pub fn auto_from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
     //  Try sentinels first.
     //  Binary sentinel
@@ -38,14 +39,22 @@ pub fn auto_from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
     {
         return binary::from_bytes(&msg[binary::LLSDBINARYSENTINEL.len()..]);
     }
-    //  Try Notation sentinel. Tolerate trailing newline.
-    let sentinel = notation::LLSDNOTATIONSENTINEL.trim_end().as_bytes();  // sentinel without the trailing newline
-    if msg.len() >= sentinel.len()
-        && &msg[0..sentinel.len()] == sentinel
-    {
-        return notation::from_bytes(&msg[sentinel.len()..]);
-    }
-    
+    //  For text forms, tolerate leading whitespace.      
+    {   let msg = trim_ascii_start(msg);               // remove leading whitespace if any
+        //  Try Notation sentinel. Tolerate trailing newline. 
+        let sentinel = notation::LLSDNOTATIONSENTINEL.trim_end().as_bytes();  // sentinel without the trailing newline
+        if msg.len() >= sentinel.len()
+            && &msg[0..sentinel.len()] == sentinel
+        {
+            return notation::from_bytes(&msg[sentinel.len()..]);
+        }
+        //  Try XML sentinel.
+        let msgstring = std::str::from_utf8(msg)?; // convert to UTF-8 string
+        if msgstring.trim_start().starts_with(xml::LLSDXMLSENTINEL) {
+        // try XML
+            return xml::from_str(msgstring);
+        }
+    }   
     //  Check for binary without header. If array or map marker, parse.
     if msg.len() > 1 {
         match msg[0] {
@@ -55,21 +64,29 @@ pub fn auto_from_bytes(msg: &[u8]) -> Result<crate::LLSDValue, Error> {
         }
     }
     
-    //  Try XML sentinel.
-    let msgstring = std::str::from_utf8(msg)?; // convert to UTF-8 string
-    if msgstring.trim_start().starts_with(xml::LLSDXMLSENTINEL) {
-        // try XML
-        return xml::from_str(msgstring);
-    }
-
     //  Trim string to N chars for error msg.
-    let snippet = msgstring
+    let snippet = String::from_utf8_lossy(msg)
         .chars()
         .zip(0..60)
         .map(|(c, _)| c)
         .collect::<String>();
     Err(anyhow!("LLSD format not recognized: {:?}", snippet))
 }
+
+/// Trim ASCII whitespace from string. 
+/// From an unstable Rust feature soon to become standard.
+fn trim_ascii_start(b: &[u8]) -> &[u8] {
+    let mut bytes = b;
+    while let [first, rest @ ..] = bytes {
+        if first.is_ascii_whitespace() {
+            bytes = rest;
+        } else {
+            break;
+        }
+    }
+    bytes
+}
+
 
 #[test]
 fn testpbrmaterialdecode() {
