@@ -155,7 +155,7 @@ fn parse_primitive_value<R: BufRead>(
                         }
                         .parse::<f64>()?,
                     )),
-                    "integer" => Ok(LLSDValue::Integer(text.parse::<i32>()?)),
+                    "integer" => Ok(LLSDValue::Integer(parse_integer(&text)?)),
                     "boolean" => Ok(LLSDValue::Boolean(parse_boolean(&text)?)),
                     "string" => Ok(LLSDValue::String(text)),
                     "uri" => Ok(LLSDValue::String(text)),
@@ -401,7 +401,17 @@ fn parse_date(s: &str) -> Result<i64, Error> {
     Ok(chrono::DateTime::parse_from_rfc3339(s)?.timestamp())
 }
 
-//  Parse boolean. LSL allows 0. 0.0, false, 1. 1.0, true.
+/// Parse integer. LSL allows the empty string as 0.
+fn parse_integer(s: &str) -> Result<i32, Error> {
+    let s = s.trim();
+    if s.is_empty() {
+        Ok(0)               // empty string
+    } else {
+        Ok(s.parse::<i32>()?)    // nonempty string
+    }
+}
+
+///  Parse boolean. LSL allows 0. 0.0, false, 1. 1.0, true.
 fn parse_boolean(s: &str) -> Result<bool, Error> {
     Ok(match s {
         "0" | "0.0" => false,
@@ -429,6 +439,20 @@ fn get_attr(attrs: &Attributes, key: &[u8]) -> Result<Option<String>, Error> {
 
 #[test]
 fn xmlparsetest1() {
+
+    const TESTXMLZERO: &str = r#"
+<?xml version="1.0" encoding="UTF-8"?>
+<llsd>
+<array>
+<integer>0</integer>
+<integer>100</integer>
+<integer />
+</array>
+</llsd>
+"#;
+
+    const TESTXMLZEROARRAY: [i32;3] = [ 0, 100, 0 ]; // expected values
+
     const TESTXMLNAN: &str = r#"
 <?xml version="1.0" encoding="UTF-8"?>
 <llsd>
@@ -501,6 +525,16 @@ fn xmlparsetest1() {
         assert_eq!(parsed1, parsed2);
     }
     trytestcase(TESTXML1);
+    //  Special test cases.
+    //  Test zero case, where an empty <integer /> is 0, per spec.
+    {   let parsed0 = from_str(TESTXMLZERO).unwrap();
+        println!("Parse of {}: \n{:#?}", TESTXMLZERO, parsed0);
+        let arr = parsed0.as_array().unwrap();  // yields array of LLSD values
+        assert_eq!(arr.len() , TESTXMLZEROARRAY.len()); // lengths must match
+        for (item, n) in arr.iter().zip(TESTXMLZEROARRAY) {
+            assert_eq!(n, *(item.as_integer().unwrap()));  // must match
+        }
+    }
     //  Test NAN case
     {
         let parsed1 = from_str(TESTXMLNAN).unwrap();
@@ -512,4 +546,6 @@ fn xmlparsetest1() {
         let s2 = generated.replace(" ", "").replace("\n", "");
         assert_eq!(s1, s2);
     }
+
+    
 }
