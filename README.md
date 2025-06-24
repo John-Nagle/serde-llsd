@@ -67,4 +67,4 @@ LLSD XML.
 
 - Error messages do not indicate the source of the problem in the incoming stream.
 
-
+- The automatic generation of marshalling and unmarshalling code in Rust using macros is not implemented.
